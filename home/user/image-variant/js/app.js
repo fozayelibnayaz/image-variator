@@ -30,63 +30,68 @@ const cameraTakes = [
 
 // Pure geometry only — crop, zoom, rotation for angle look. No filters, no light, no color.
 // Amplified for STRONG, clearly visible differences (user requirement: "not just slightly")
+// Pure geometry ONLY — crop + zoom + framing offsets (NO rotation at all).
+// User requirement: no tilted images, no black background from rotation.
+// Strong, clearly visible camera angle/framing changes (different crop windows + zoom) so each variant looks obviously new and different.
+// Every output image preserves the EXACT original proportions of the source (no stretch whatsoever).
+// The crop is always calculated to have the exact same aspect ratio as the target canvas (800x600).
+// drawImage then fills the canvas 100% — no black bars, no extra background.
 function getCameraGeometry(camera) {
   let zoom = 1.0;
-  let rotation = 0;
   let cropXOffset = 0;
   let cropYOffset = 0;
   let framingNote = "standard framing";
 
   if (camera.includes("Close-up") || camera.includes("Macro")) {
-    zoom = 2.6; framingNote = "extreme close-up macro crop revealing fine surface details and texture";
+    zoom = 3.4; cropXOffset = 0.02; cropYOffset = 0.01; framingNote = "extreme close-up macro crop revealing fine surface details and texture";
   }
   if (camera.includes("Telephoto") || camera.includes("Tight")) {
-    zoom = 2.1; framingNote = "tight telephoto compression isolating the key subject detail";
+    zoom = 2.6; cropXOffset = 0.01; cropYOffset = -0.01; framingNote = "tight telephoto compression isolating the key subject detail";
   }
   if (camera.includes("Wide") || camera.includes("Panoramic") || camera.includes("Environmental") || camera.includes("Fisheye")) {
-    zoom = 0.48; framingNote = "very wide contextual overview showing the full environment and scale";
+    zoom = 0.36; framingNote = "very wide contextual overview showing the full environment and scale";
   }
   if (camera.includes("Low Angle")) {
-    rotation = -22; zoom = 0.85; cropYOffset = -0.14; framingNote = "strong dramatic low angle with powerful vertical emphasis and height";
+    zoom = 0.86; cropYOffset = -0.25; framingNote = "strong low-angle perspective with powerful vertical emphasis and height";
   }
   if (camera.includes("High Angle") || camera.includes("Bird")) {
-    rotation = 18; zoom = 0.65; cropYOffset = 0.11; framingNote = "pronounced high-angle bird's-eye perspective with compressed depth";
+    zoom = 0.48; cropYOffset = 0.20; framingNote = "pronounced high-angle perspective with compressed depth and overview";
   }
   if (camera.includes("Dutch Tilt") || camera.includes("Oblique")) {
-    rotation = 26; framingNote = "bold creative Dutch tilt / oblique angle for strong dynamic visual tension";
+    zoom = 1.18; cropXOffset = 0.18; cropYOffset = 0.12; framingNote = "dynamic oblique framing for strong visual tension and movement";
   }
   if (camera.includes("Side Profile")) {
-    rotation = 7; cropXOffset = 0.22; framingNote = "clear side profile view with elongated horizontal composition";
+    zoom = 1.05; cropXOffset = 0.35; framingNote = "clear side profile view with elongated horizontal composition";
   }
   if (camera.includes("Three-Quarter")) {
-    rotation = -11; cropXOffset = -0.13; framingNote = "distinct three-quarter angle revealing volume, form and depth";
+    zoom = 1.28; cropXOffset = -0.20; cropYOffset = 0.07; framingNote = "distinct three-quarter angle revealing volume, form and depth";
   }
   if (camera.includes("Overhead") || camera.includes("Top-Down")) {
-    rotation = 5; zoom = 0.58; framingNote = "direct overhead top-down flat perspective with strong geometric layout";
+    zoom = 0.42; cropYOffset = 0.14; framingNote = "direct overhead top-down flat perspective with strong geometric layout";
   }
   if (camera.includes("Isometric")) {
-    rotation = 12; zoom = 0.78; framingNote = "pronounced isometric geometric angle with clear structured volume";
+    zoom = 0.72; cropXOffset = 0.13; cropYOffset = -0.10; framingNote = "pronounced isometric geometric angle with clear structured volume";
   }
   if (camera.includes("Vertical Portrait")) {
-    zoom = 1.65; cropYOffset = -0.09; framingNote = "strong vertical portrait orientation emphasizing height and elegance";
+    zoom = 1.82; cropYOffset = -0.16; framingNote = "strong vertical portrait orientation emphasizing height and elegance";
   }
   if (camera.includes("Dynamic") || camera.includes("Motion")) {
-    rotation = -9; zoom = 1.35; framingNote = "dynamic angled capture with clear sense of movement and energy";
+    zoom = 1.38; cropXOffset = -0.15; cropYOffset = 0.10; framingNote = "dynamic angled capture with clear sense of movement and energy";
   }
   if (camera.includes("Texture") || camera.includes("Detail Focus")) {
-    zoom = 2.85; cropXOffset = 0.09; cropYOffset = 0.06; framingNote = "extreme texture and material detail focus with maximum closeness";
+    zoom = 3.6; cropXOffset = 0.05; cropYOffset = 0.03; framingNote = "extreme texture and material detail focus with maximum closeness";
   }
   if (camera.includes("Lifestyle") || camera.includes("Contextual")) {
-    zoom = 0.55; framingNote = "lifestyle contextual framing showing the subject in its real environment";
+    zoom = 0.40; framingNote = "lifestyle contextual framing showing the subject in its real environment";
   }
   if (camera.includes("Symmetrical")) {
-    zoom = 1.22; framingNote = "perfectly symmetrical centered composition with balanced visual harmony";
+    zoom = 1.18; framingNote = "perfectly symmetrical centered composition with balanced visual harmony";
   }
   if (camera.includes("Standard Frontal") || camera.includes("Eye-Level") || camera.includes("Static Product")) {
     zoom = 1.0; framingNote = "classic eye-level frontal or static product framing with balanced composition";
   }
 
-  return { zoom, rotation, cropXOffset, cropYOffset, framingNote };
+  return { zoom, cropXOffset, cropYOffset, framingNote };
 }
 
 function createVariantImage(baseUrl, camera) {
@@ -107,45 +112,38 @@ function createVariantImage(baseUrl, camera) {
       const imgH = img.height;
       const imgAspect = imgW / imgH;
 
-      // Compute crop rect that ALWAYS matches target aspect ratio (4:3) so drawImage never stretches or distorts.
-      // Zoom controls how large the crop is (smaller crop = tighter framing/zoom-in). Offsets shift the center.
-      // This keeps the exact same visual content/framing as before but without any pixel stretching.
+      // Compute crop rect that ALWAYS matches target aspect ratio so drawImage NEVER stretches or distorts.
+      // This guarantees the original photo proportions are preserved 100%.
+      // Zoom + offsets create strong, clearly visible camera angle/framing changes.
+      // NO rotation is ever applied (user requirement: no tilt, no black background).
       const z = geo.zoom || 1.0;
       let cropW, cropH;
+
       if (imgAspect >= targetAspect) {
-        // Image wider than or equal to target: size crop using height
+        // Source is wider or equal → base crop on height
         cropH = imgH / z;
         cropW = cropH * targetAspect;
       } else {
-        // Image taller: size crop using width
+        // Source is taller → base crop on width
         cropW = imgW / z;
         cropH = cropW / targetAspect;
       }
 
-      // Apply center + user-chosen offsets (as fraction of full image)
+      // Apply center + strong user-chosen offsets (as fraction of full image dimensions)
       let sx = (imgW - cropW) / 2 + (geo.cropXOffset || 0) * imgW;
       let sy = (imgH - cropH) / 2 + (geo.cropYOffset || 0) * imgH;
 
-      // Clamp so crop stays inside image
+      // Clamp crop to stay inside the source image
       sx = Math.max(0, Math.min(sx, imgW - cropW));
       sy = Math.max(0, Math.min(sy, imgH - cropH));
 
-      // Final safety clamp on crop size
+      // Final safety — make sure crop is never larger than source
       cropW = Math.min(cropW, imgW - sx);
       cropH = Math.min(cropH, imgH - sy);
 
-      ctx.save();
-
-      if (geo.rotation !== 0) {
-        ctx.translate(targetW / 2, targetH / 2);
-        ctx.rotate(geo.rotation * Math.PI / 180);
-        ctx.translate(-targetW / 2, -targetH / 2);
-      }
-
-      // Pure geometry only — crop rect has exact target aspect => draw fills canvas with NO stretch/distortion.
+      // NO rotation ever — pure crop + zoom + offset only.
+      // drawImage fills the entire 800x600 canvas completely (correct aspect crop guarantees no black, no stretch).
       ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
-
-      ctx.restore();
 
       canvas.toBlob((blob) => {
         resolve(blob ? URL.createObjectURL(blob) : baseUrl);
