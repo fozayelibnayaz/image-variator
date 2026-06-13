@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Variant v4.1 • English UI + French SEO</title>
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <img src="assets/logo.png" alt="Image Variant Logo" class="logo">
+      <div class="header-text">
+        <h1>Image Variant <span style="color:#007aff; font-size:0.8em;">v4.1</span></h1>
+        <p class="subtitle">English Interface • French SEO Metadata • 100% Unique Variants</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Upload Section -->
+    <section id="upload-section">
+      <h2>1. Upload Base Images (4 recommended, 1 per page)</h2>
+      <div class="glass">
+        <div id="dropzone" class="dropzone">
+          <p>📁 Drop your base images here (PNG, JPG)</p>
+          <p class="hint">Click anywhere in this area or drag &amp; drop • Max 4 images for best results</p>
+        </div>
+        <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+      </div>
+      <div id="base-previews" class="previews"></div>
+      <div style="margin-top:12px;">
+        <button onclick="clearBases()" class="secondary">Clear All Base Images</button>
+      </div>
+    </section>
+
+    <!-- Generation Controls -->
+    <section id="controls-section">
+      <h2>2. Generate Unique Variants</h2>
+      <div class="controls glass">
+        <button onclick="generateVariants()">✨ Generate 4 Unique Variants</button>
+        <button onclick="batchGenerateSeo()" class="secondary">Generate SEO for All</button>
+        <button onclick="clearLog()" class="secondary">Clear Log</button>
+      </div>
+      <p style="font-size:13px; color:#8e8e93; margin:0 0 12px;">
+        Each variant gets a <strong>distinct camera take + light profile</strong> pair (shuffled from 24 takes × 5 profiles).<br>
+        French SEO fields are guaranteed 100% unique sentences — no phrase reused anywhere in the batch.
+      </p>
+    </section>
+
+    <!-- Gallery -->
+    <section id="gallery-section">
+      <h2>3. Variant Gallery (Visual Previews)</h2>
+      <div id="gallery-grid" class="gallery-grid"></div>
+    </section>
+
+    <!-- SEO Table -->
+    <section id="seo-section">
+      <h2>4. SEO Metadata Table (French) — Live Character Counters</h2>
+      <div id="seo-table-container" class="glass"></div>
+      <p style="font-size:12px; color:#8e8e93; margin-top:8px;">
+        Edit any field directly. Counters update live. Per-variant 🔎 Fetch / ✨ Generate buttons above respect global uniqueness.
+      </p>
+    </section>
+
+    <!-- Exports -->
+    <section id="exports-section">
+      <h2>5. Export</h2>
+      <div class="exports glass">
+        <button onclick="exportZip()">📦 Export ZIP (4 Variant JPGs + metadata.txt + CSV)</button>
+        <button onclick="exportCsv()">📄 Export CSV (SEO Data Only)</button>
+      </div>
+    </section>
+
+    <!-- Log -->
+    <section id="log-section">
+      <h2>Activity Log</h2>
+      <div id="log-output" class="log glass"></div>
+    </section>
+
+    <!-- Help / Instructions -->
+    <section id="help-section" class="help glass">
+      <h2>How It Works (English)</h2>
+      <ul>
+        <li><strong>Upload:</strong> Drop or select up to 4 base images (one per page). If none uploaded, realistic placeholders are used automatically.</li>
+        <li><strong>Generate Variants:</strong> Creates 4 completely unique variants. Visuals simulated with real canvas filters + framing based on assigned camera/light. Every variant uses a different (camera take + light profile) pair.</li>
+        <li><strong>French SEO:</strong> All Alt Text, Title, Caption, Description are full grammatically correct French sentences. Strict 100% uniqueness: no sentence or phrase is reused across any of the 16 fields in the batch.</li>
+        <li><strong>Per-variant controls:</strong> Use 🔎 Fetch or ✨ Generate on any card to refresh only that variant’s SEO while automatically avoiding phrases already used by the other three variants.</li>
+        <li><strong>Editing:</strong> Change text in the table anytime. Character counters turn red if over limit (but generation always produces complete sentences under limits).</li>
+        <li><strong>Exports:</strong> ZIP includes the 4 processed unique JPG variants + full metadata text file + CSV. CSV export is also available separately.</li>
+        <li><strong>Guarantees:</strong> 24 camera takes × 5 light profiles = 120 possible pairs. Shuffled master list ensures the 4 variants always get distinct pairs. Text uniqueness enforced with global phrase tracking + retries.</li>
+      </ul>
+      <p style="margin-top:16px; font-size:12px; color:#8e8e93;">
+        Double-click this <code>index.html</code> to run locally. No server or internet required. All processing happens in your browser.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    Image Variant v4.1 — Clean glassmorphism UI • 100% client-side • English UI / French SEO
+  </footer>
+
+  <script src="js/jszip.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
