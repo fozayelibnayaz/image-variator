@@ -11,6 +11,12 @@ let logEl = null;
 let numVariants = 4;
 let exportFormat = 'image/jpeg';
 
+// NEW: User-provided SEO context (everything is user input)
+let pageUrl = '';
+let pageContent = '';
+let focusKeyphrase = '';
+let globalStylePreset = '';   // user input for any style presets / additional context (used ONLY for SEO text, never for image rendering)
+
 const cameraTakes = [
   "Standard Frontal Shot", "Close-up Detail Shot", "Wide Angle Overview",
   "Low Angle Perspective", "High Angle Bird's Eye", "Three-Quarter Angle",
@@ -23,6 +29,7 @@ const cameraTakes = [
 ];
 
 // Pure geometry only — crop, zoom, rotation for angle look. No filters, no light, no color.
+// Amplified for STRONG, clearly visible differences (user requirement: "not just slightly")
 function getCameraGeometry(camera) {
   let zoom = 1.0;
   let rotation = 0;
@@ -31,52 +38,52 @@ function getCameraGeometry(camera) {
   let framingNote = "standard framing";
 
   if (camera.includes("Close-up") || camera.includes("Macro")) {
-    zoom = 1.85; framingNote = "extreme close crop on subject details and texture";
+    zoom = 2.6; framingNote = "extreme close-up macro crop revealing fine surface details and texture";
   }
   if (camera.includes("Telephoto") || camera.includes("Tight")) {
-    zoom = 1.55; framingNote = "tight telephoto compression focused on key detail";
+    zoom = 2.1; framingNote = "tight telephoto compression isolating the key subject detail";
   }
   if (camera.includes("Wide") || camera.includes("Panoramic") || camera.includes("Environmental") || camera.includes("Fisheye")) {
-    zoom = 0.62; framingNote = "wide contextual overview of the full scene";
+    zoom = 0.48; framingNote = "very wide contextual overview showing the full environment and scale";
   }
   if (camera.includes("Low Angle")) {
-    rotation = -12; zoom = 0.92; cropYOffset = -0.09; framingNote = "dramatic low angle with strong vertical emphasis";
+    rotation = -22; zoom = 0.85; cropYOffset = -0.14; framingNote = "strong dramatic low angle with powerful vertical emphasis and height";
   }
   if (camera.includes("High Angle") || camera.includes("Bird")) {
-    rotation = 10; zoom = 0.80; cropYOffset = 0.07; framingNote = "high overhead perspective with compressed depth";
+    rotation = 18; zoom = 0.65; cropYOffset = 0.11; framingNote = "pronounced high-angle bird's-eye perspective with compressed depth";
   }
   if (camera.includes("Dutch Tilt") || camera.includes("Oblique")) {
-    rotation = 17; framingNote = "creative angled tilt for dynamic visual tension";
+    rotation = 26; framingNote = "bold creative Dutch tilt / oblique angle for strong dynamic visual tension";
   }
   if (camera.includes("Side Profile")) {
-    rotation = 4; cropXOffset = 0.14; framingNote = "side profile view with elongated composition";
+    rotation = 7; cropXOffset = 0.22; framingNote = "clear side profile view with elongated horizontal composition";
   }
   if (camera.includes("Three-Quarter")) {
-    rotation = -6; cropXOffset = -0.08; framingNote = "three-quarter angle revealing form and depth";
+    rotation = -11; cropXOffset = -0.13; framingNote = "distinct three-quarter angle revealing volume, form and depth";
   }
   if (camera.includes("Overhead") || camera.includes("Top-Down")) {
-    rotation = 3; zoom = 0.75; framingNote = "direct overhead top-down flat perspective";
+    rotation = 5; zoom = 0.58; framingNote = "direct overhead top-down flat perspective with strong geometric layout";
   }
   if (camera.includes("Isometric")) {
-    rotation = 7; zoom = 0.85; framingNote = "isometric geometric angle with structured volume";
+    rotation = 12; zoom = 0.78; framingNote = "pronounced isometric geometric angle with clear structured volume";
   }
   if (camera.includes("Vertical Portrait")) {
-    zoom = 1.28; cropYOffset = -0.06; framingNote = "vertical portrait orientation emphasizing height";
+    zoom = 1.65; cropYOffset = -0.09; framingNote = "strong vertical portrait orientation emphasizing height and elegance";
   }
   if (camera.includes("Dynamic") || camera.includes("Motion")) {
-    rotation = -5; zoom = 1.12; framingNote = "dynamic angled capture suggesting movement";
+    rotation = -9; zoom = 1.35; framingNote = "dynamic angled capture with clear sense of movement and energy";
   }
   if (camera.includes("Texture") || camera.includes("Detail Focus")) {
-    zoom = 2.0; cropXOffset = 0.06; cropYOffset = 0.04; framingNote = "extreme texture and surface detail focus";
+    zoom = 2.85; cropXOffset = 0.09; cropYOffset = 0.06; framingNote = "extreme texture and material detail focus with maximum closeness";
   }
   if (camera.includes("Lifestyle") || camera.includes("Contextual")) {
-    zoom = 0.70; framingNote = "lifestyle contextual framing showing environment";
+    zoom = 0.55; framingNote = "lifestyle contextual framing showing the subject in its real environment";
   }
   if (camera.includes("Symmetrical")) {
-    zoom = 1.08; framingNote = "perfectly symmetrical centered composition";
+    zoom = 1.22; framingNote = "perfectly symmetrical centered composition with balanced visual harmony";
   }
   if (camera.includes("Standard Frontal") || camera.includes("Eye-Level") || camera.includes("Static Product")) {
-    zoom = 1.0; framingNote = "classic eye-level frontal or static product framing";
+    zoom = 1.0; framingNote = "classic eye-level frontal or static product framing with balanced composition";
   }
 
   return { zoom, rotation, cropXOffset, cropYOffset, framingNote };
@@ -295,6 +302,78 @@ function setNumVariants(n) {
   renderSeoTable();
 }
 
+// === NEW: User SEO Context functions (everything is user input) ===
+function updateSeoContext() {
+  const urlInput = document.getElementById('page-url');
+  const contentInput = document.getElementById('page-content');
+  const keyInput = document.getElementById('focus-keyphrase');
+  const presetInput = document.getElementById('global-preset');
+
+  pageUrl = urlInput ? urlInput.value.trim() : '';
+  pageContent = contentInput ? contentInput.value.trim() : '';
+  focusKeyphrase = keyInput ? keyInput.value.trim() : '';
+  globalStylePreset = presetInput ? presetInput.value.trim() : '';
+
+  const status = document.getElementById('context-status');
+  if (status) {
+    let msg = 'SEO context saved.';
+    if (focusKeyphrase) msg += ` Keyphrase: "${focusKeyphrase}"`;
+    if (globalStylePreset) msg += ` | Style: "${globalStylePreset}"`;
+    status.textContent = msg;
+    setTimeout(() => { if (status) status.textContent = ''; }, 4000);
+  }
+
+  log(`SEO Context updated — Focus Keyphrase: "${focusKeyphrase || '(none)'}" | Style Preset: "${globalStylePreset || '(none)'}" | Page content length: ${pageContent.length} chars`);
+}
+
+async function fetchPageContent() {
+  const urlInput = document.getElementById('page-url');
+  const contentInput = document.getElementById('page-content');
+  if (!urlInput || !contentInput) return;
+
+  const url = urlInput.value.trim();
+  if (!url) {
+    alert('Please enter a valid Page URL first.');
+    return;
+  }
+
+  log(`Attempting to fetch content from: ${url} ... (note: some sites block cross-origin requests)`);
+
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const html = await response.text();
+
+    // Very simple extraction of visible text (title + main paragraphs)
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    let extracted = '';
+    const title = doc.querySelector('title');
+    if (title) extracted += title.textContent + '\n\n';
+
+    const h1s = doc.querySelectorAll('h1, h2');
+    h1s.forEach(h => extracted += h.textContent + '\n');
+
+    const paragraphs = doc.querySelectorAll('p, .description, .product-description, main p');
+    paragraphs.forEach(p => {
+      const t = p.textContent.trim();
+      if (t.length > 30) extracted += t + '\n\n';
+    });
+
+    if (extracted.length > 50) {
+      contentInput.value = extracted.trim().substring(0, 4000);
+      log(`Successfully fetched and extracted ~${extracted.length} characters from the page.`);
+      updateSeoContext();
+    } else {
+      throw new Error('Not enough readable content extracted');
+    }
+  } catch (e) {
+    log(`Fetch failed: ${e.message}. This is normal for many websites due to CORS. Please copy-paste the page content manually into the textarea.`);
+    alert('Automatic fetch failed (common due to website security). Please copy the main text/description from the page and paste it manually into the "Paste Page Content" box.');
+  }
+}
+
 function setExportFormat(format) {
   exportFormat = format;
   log(`Export format changed to ${format.split("/")[1].toUpperCase()}.`);
@@ -451,38 +530,95 @@ function buildUniqueFrenchSeo(camera, usedSet) {
   const concept = getConceptForVariant({ camera });
   const preferredIdx = cameraToSeoIndex[camera] ?? 0;
 
+  // Build dynamic context from user inputs (focus keyphrase = top priority)
+  const userContext = [
+    focusKeyphrase || '',
+    globalStylePreset || '',
+    pageContent.substring(0, 800) || ''
+  ].join(' ').toLowerCase();
+
   function pickUnique(pool, usedSet, limit, concept, preferredIdx = -1) {
-    // 1. Strongly prefer the exact matching SEO entry for this camera (guarantees relevance)
+    // 1. Strongly prefer the exact matching SEO entry for this camera
     if (preferredIdx >= 0 && preferredIdx < pool.length) {
-      const pref = pool[preferredIdx];
+      let pref = pool[preferredIdx];
+      // Inject user focus keyphrase + style if provided (while keeping grammar)
+      if (focusKeyphrase && pref.length + focusKeyphrase.length + 3 <= limit) {
+        // Smart injection: add keyphrase naturally at the end or appropriate place
+        if (!pref.toLowerCase().includes(focusKeyphrase.toLowerCase())) {
+          pref = pref.replace(/\.$/, ` pour ${focusKeyphrase}.`);
+        }
+      }
+      if (globalStylePreset && pref.length + globalStylePreset.length + 5 <= limit) {
+        if (!pref.toLowerCase().includes(globalStylePreset.toLowerCase())) {
+          pref = pref.replace(/\.$/, ` dans un style ${globalStylePreset}.`);
+        }
+      }
       if (!usedSet.has(pref) && pref.length <= limit) {
         return pref;
       }
     }
 
-    // 2. Fallback: relevance sort (boosts camera-specific French phrasing)
+    // 2. Relevance sort boosted by camera + user focus keyphrase + style preset + page content
     let candidates = [...pool];
-    if (concept) {
-      const lc = concept.toLowerCase();
-      candidates.sort((a, b) => {
-        let sa = 0, sb = 0;
-        if (lc.includes("gros plan") || lc.includes("close") || lc.includes("macro") || lc.includes("détail") || lc.includes("texture")) {
-          if (a.toLowerCase().includes("gros plan") || a.toLowerCase().includes("détail") || a.toLowerCase().includes("texture")) sa += 2;
-          if (b.toLowerCase().includes("gros plan") || b.toLowerCase().includes("détail") || b.toLowerCase().includes("texture")) sb += 2;
-        }
-        if (lc.includes("wide") || lc.includes("panoramique") || lc.includes("environnement") || lc.includes("large") || lc.includes("vue d'ensemble")) {
-          if (a.toLowerCase().includes("large") || a.toLowerCase().includes("vue d'ensemble") || a.toLowerCase().includes("contexte")) sa += 1;
-          if (b.toLowerCase().includes("large") || b.toLowerCase().includes("vue d'ensemble") || b.toLowerCase().includes("contexte")) sb += 1;
-        }
-        if (lc.includes("angle") || lc.includes("bas") || lc.includes("plongée") || lc.includes("oblique") || lc.includes("rotation") || lc.includes("profil") || lc.includes("vertical")) {
-          if (a.toLowerCase().includes("angle") || a.toLowerCase().includes("plongée") || a.toLowerCase().includes("oblique") || a.toLowerCase().includes("profil") || a.toLowerCase().includes("vertical")) sa += 1;
-          if (b.toLowerCase().includes("angle") || b.toLowerCase().includes("plongée") || b.toLowerCase().includes("oblique") || b.toLowerCase().includes("profil") || b.toLowerCase().includes("vertical")) sb += 1;
-        }
-        return (sb - sa) || (Math.random() - 0.5);
-      });
-    }
+    const lc = (concept + ' ' + userContext).toLowerCase();
+
+    candidates.sort((a, b) => {
+      let sa = 0, sb = 0;
+
+      // Camera relevance (existing logic)
+      if (lc.includes("gros plan") || lc.includes("close") || lc.includes("macro") || lc.includes("détail") || lc.includes("texture")) {
+        if (a.toLowerCase().includes("gros plan") || a.toLowerCase().includes("détail") || a.toLowerCase().includes("texture")) sa += 2;
+        if (b.toLowerCase().includes("gros plan") || b.toLowerCase().includes("détail") || b.toLowerCase().includes("texture")) sb += 2;
+      }
+      if (lc.includes("wide") || lc.includes("panoramique") || lc.includes("environnement") || lc.includes("large") || lc.includes("vue d'ensemble")) {
+        if (a.toLowerCase().includes("large") || a.toLowerCase().includes("vue d'ensemble") || a.toLowerCase().includes("contexte")) sa += 1;
+        if (b.toLowerCase().includes("large") || b.toLowerCase().includes("vue d'ensemble") || b.toLowerCase().includes("contexte")) sb += 1;
+      }
+      if (lc.includes("angle") || lc.includes("bas") || lc.includes("plongée") || lc.includes("oblique") || lc.includes("rotation") || lc.includes("profil") || lc.includes("vertical")) {
+        if (a.toLowerCase().includes("angle") || a.toLowerCase().includes("plongée") || a.toLowerCase().includes("oblique") || a.toLowerCase().includes("profil") || a.toLowerCase().includes("vertical")) sa += 1;
+        if (b.toLowerCase().includes("angle") || b.toLowerCase().includes("plongée") || b.toLowerCase().includes("oblique") || b.toLowerCase().includes("profil") || b.toLowerCase().includes("vertical")) sb += 1;
+      }
+
+      // Strong boost for user's Focus Keyphrase (top priority)
+      if (focusKeyphrase) {
+        const k = focusKeyphrase.toLowerCase();
+        if (a.toLowerCase().includes(k)) sa += 4;
+        if (b.toLowerCase().includes(k)) sb += 4;
+      }
+
+      // Boost for global style preset
+      if (globalStylePreset) {
+        const s = globalStylePreset.toLowerCase();
+        if (a.toLowerCase().includes(s) || (s.includes("luxury") && (a.includes("premium") || a.includes("élégant") || a.includes("sophistiqué")))) sa += 2;
+        if (b.toLowerCase().includes(s) || (s.includes("luxury") && (b.includes("premium") || b.includes("élégant") || b.includes("sophistiqué")))) sb += 2;
+      }
+
+      // Bonus from page content keywords
+      if (pageContent) {
+        const keywords = pageContent.toLowerCase().split(/\s+/).filter(w => w.length > 4).slice(0, 15);
+        keywords.forEach(kw => {
+          if (a.toLowerCase().includes(kw)) sa += 1;
+          if (b.toLowerCase().includes(kw)) sb += 1;
+        });
+      }
+
+      return (sb - sa) || (Math.random() - 0.5);
+    });
+
     for (let text of candidates) {
-      if (!usedSet.has(text) && text.length <= limit) return text;
+      let finalText = text;
+
+      // Inject focus keyphrase (highest priority)
+      if (focusKeyphrase && !finalText.toLowerCase().includes(focusKeyphrase.toLowerCase()) && finalText.length + focusKeyphrase.length + 8 <= limit) {
+        finalText = finalText.replace(/\.$/, ` pour ${focusKeyphrase}.`);
+      }
+
+      // Inject style preset
+      if (globalStylePreset && !finalText.toLowerCase().includes(globalStylePreset.toLowerCase()) && finalText.length + globalStylePreset.length + 10 <= limit) {
+        finalText = finalText.replace(/\.$/, ` dans un style ${globalStylePreset}.`);
+      }
+
+      if (!usedSet.has(finalText) && finalText.length <= limit) return finalText;
     }
 
     // 3. Last resort: any unused, trimmed if needed
@@ -691,7 +827,7 @@ function setupDropzone() {
 async function generateVariants() {
   if (variants.length !== numVariants) initVariants();
 
-  log(`Generating ${numVariants} variants using PURE CAMERA ANGLES ONLY — no filters, no lighting, no color changes. Only crop/zoom + rotation for distinct new looks.`);
+  log(`Generating ${numVariants} variants using PURE STRONG CAMERA ANGLES ONLY (no filters, no lighting, no color changes, no stretch, no extra background). Differences are clearly visible.`);
 
   for (let i = 0; i < variants.length; i++) {
     const baseUrl = getBaseForVariant(i);

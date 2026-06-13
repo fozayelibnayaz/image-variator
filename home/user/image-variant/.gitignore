@@ -1,0 +1,19 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local only
+node_modules/
+.env
+*.log
+
+# Generated exports (optional - you can keep them out of git)
+*.zip
+*.csv
+exported-*
+variants-*
+
+# No need to track large binaries if you don't want them
+# assets/ is fine to keep (small icons)
