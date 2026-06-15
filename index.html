@@ -3,29 +3,123 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Image Variant v4.1 • English UI + French SEO</title>
+  <title>Image Variant v4.1.3 • Pure Camera Angles Only</title>
   <link rel="icon" href="assets/favicon.png">
   <link rel="stylesheet" href="css/main.css">
+  <style>
+    /* Extra styles for new SEO context section */
+    .seo-context-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 800px) {
+      .seo-context-grid { grid-template-columns: 1fr; }
+    }
+    .seo-context-grid > div {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .seo-context-grid label {
+      font-size: 12px;
+      color: #8e8e93;
+      font-weight: 500;
+    }
+    .seo-context-grid input, .seo-context-grid textarea {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .seo-context-grid textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+    .context-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .context-status {
+      font-size: 12px;
+      color: var(--success);
+      margin-top: 4px;
+    }
+    .focus-important {
+      color: #ffcc00;
+      font-weight: 600;
+    }
+    .angle-selectors {
+      margin-top: 12px;
+    }
+    .concept {
+      font-size: 12px;
+      color: #a8a8b3;
+      margin: 4px 0 8px;
+      line-height: 1.35;
+    }
+  </style>
 </head>
 <body>
   <header>
     <div class="header-content">
       <img src="assets/logo.png" alt="Image Variant Logo" class="logo">
       <div class="header-text">
-        <h1>Image Variant <span style="color:#007aff; font-size:0.8em;">v4.1</span></h1>
-        <p class="subtitle">English Interface • French SEO Metadata • 100% Unique Variants</p>
+        <h1>Image Variant <span style="color:#007aff; font-size:0.8em;">v4.1.3</span></h1>
+        <p class="subtitle">English UI • French SEO (variants only) • 100% Pure Camera Angles / Framing</p>
       </div>
     </div>
   </header>
 
   <main>
+    <!-- 0. NEW: SEO Context & User Inputs (drives French SEO on variants only) -->
+    <section id="seo-context-section">
+      <h2>0. SEO Context &amp; User Inputs <span style="font-size:12px; color:#8e8e93;">(drives French SEO for all variant images — focus keyphrase = highest priority)</span></h2>
+      <div class="glass">
+        <div class="seo-context-grid">
+          <div>
+            <label>Page URL (optional — click Fetch to pull content)</label>
+            <div style="display:flex; gap:8px;">
+              <input id="page-url" type="url" placeholder="https://example.com/page" style="flex:1;" value="">
+              <button type="button" onclick="fetchPageContent()" class="secondary" style="white-space:nowrap;">🔎 Fetch Page</button>
+            </div>
+            <div id="fetch-status" style="font-size:11px; color:#8e8e93; margin-top:2px;"></div>
+          </div>
+          <div>
+            <label>Focus Keyphrase <span class="focus-important">(MOST IMPORTANT — highest priority in all French SEO)</span></label>
+            <input id="focus-keyphrase" type="text" placeholder="e.g. camion de déménagement Renault" value="">
+          </div>
+          <div>
+            <label>Pasted Page Content / Text (for SEO relevance)</label>
+            <textarea id="page-content" placeholder="Paste any text from the target page here (headings, description, etc.). This helps make SEO content-aware and relevant to your keyword."></textarea>
+          </div>
+          <div>
+            <label>Global Variant Preset / Style (optional, used only for SEO text)</label>
+            <input id="global-preset" type="text" placeholder="e.g. professionnel, moderne, urbain, high-end" value="">
+            <div class="context-actions">
+              <button type="button" onclick="saveSeoContext()">💾 (Optional) Save SEO Context</button>
+              <span id="context-status" class="context-status"></span>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px; color:#8e8e93; margin:12px 0 0;">
+          <strong>Important:</strong> When you click "Generate Images", the system will automatically read whatever Page URL + Focus Keyphrase (and pasted content / preset) you have typed right now in this section and use them to create the French title, caption, description, alt text <strong>for the generated variant images only</strong> (never the source photo). No need to click Save first — just type the keyword and URL, then Generate.
+        </p>
+      </div>
+    </section>
+
     <!-- Upload Section -->
     <section id="upload-section">
-      <h2>1. Upload Base Images (4 recommended, 1 per page)</h2>
+      <h2>1. Upload Base Image(s)</h2>
       <div class="glass">
         <div id="dropzone" class="dropzone">
-          <p>📁 Drop your base images here (PNG, JPG)</p>
-          <p class="hint">Click anywhere in this area or drag &amp; drop • Max 4 images for best results</p>
+          <p>📁 Drop your base photo here (PNG, JPG, WEBP — any format)</p>
+          <p class="hint">Click anywhere or drag &amp; drop • The truck photo or any image • Multiple bases supported (cycled)</p>
         </div>
         <input type="file" id="file-input" multiple accept="image/*" style="display:none">
       </div>
@@ -35,17 +129,29 @@
       </div>
     </section>
 
-    <!-- Generation Controls -->
+    <!-- Generation Controls + Angle Selectors -->
     <section id="controls-section">
-      <h2>2. Generate Unique Variants</h2>
-      <div class="controls glass">
-        <button onclick="generateVariants()">✨ Generate 4 Unique Variants</button>
-        <button onclick="batchGenerateSeo()" class="secondary">Generate SEO for All</button>
-        <button onclick="clearLog()" class="secondary">Clear Log</button>
+      <h2>2. Assign Pure Camera Angles &amp; Generate</h2>
+      <div class="glass">
+        <div id="angle-selectors" class="angle-selectors">
+          <!-- Populated by JS: per-variant dropdowns + Randomize + Generate buttons -->
+        </div>
+        <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+          <label style="font-size:13px;color:#8e8e93">Number of variants (type any number you want — 1, 10, 25, 100, 500, etc. — full user input, no limit):</label>
+          <input id="num-variants-input" type="number" min="1" value="4" style="width:68px" onchange="setNumVariants(this.value)">
+          <label style="font-size:13px;color:#8e8e93; margin-left:16px;">Export Format:</label>
+          <select id="format-selector" onchange="setExportFormat(this.value)">
+            <option value="image/jpeg">JPG</option>
+            <option value="image/png">PNG (lossless)</option>
+            <option value="image/webp">WEBP</option>
+          </select>
+          <button onclick="generateVariants()" style="margin-left:12px;">✨ Generate Images with These Angles</button>
+          <button onclick="batchGenerateSeo()" class="secondary">Generate SEO for All</button>
+          <button onclick="clearLog()" class="secondary">Clear Log</button>
+        </div>
       </div>
-      <p style="font-size:13px; color:#8e8e93; margin:0 0 12px;">
-        Each variant gets a <strong>pure camera angle/framing (25 options total, including one special non-repeatable unique capture)</strong> pair (shuffled from 25 pure camera angles (including one truly non-repeatable unique option)).<br>
-        French SEO fields are guaranteed 100% unique sentences — no phrase reused anywhere in the batch.
+      <p style="font-size:12px; color:#8e8e93; margin:8px 0 0;">
+        <strong>100% pure camera angles/framing only</strong> — extreme zoom + large crop offsets create strong, obviously different “new photo from a whole new angle” results (exactly like the Big Ben collage: extreme macro clock face, dramatic low angle full height, high angle overview, side profile with foreground element, etc.). <strong>NO rotation, NO filters, NO lighting, NO color shifts, NO blur, NO black bars.</strong> Original source aspect ratio preserved 100% — no stretching/distortion ever. Each variant is a clean crop/zoom of the original proportions. You can generate any number (1 picture at a time, 10 variations, 100 at once, etc.).
       </p>
     </section>
 
@@ -60,7 +166,7 @@
       <h2>4. SEO Metadata Table (French) — Live Character Counters</h2>
       <div id="seo-table-container" class="glass"></div>
       <p style="font-size:12px; color:#8e8e93; margin-top:8px;">
-        Edit any field directly. Counters update live. Per-variant 🔎 Fetch / ✨ Generate buttons above respect global uniqueness.
+        Edit any field directly. Counters update live. Per-variant 🔎 Fetch / ✨ Generate buttons above respect global uniqueness. All text is complete grammatically-correct French sentences. SEO applies <strong>only to the generated variant images</strong>.
       </p>
     </section>
 
@@ -68,7 +174,7 @@
     <section id="exports-section">
       <h2>5. Export</h2>
       <div class="exports glass">
-        <button onclick="exportZip()">📦 Export ZIP (4 Variant JPGs + metadata.txt + CSV)</button>
+        <button onclick="exportZip()">📦 Export ZIP (variants + metadata.txt + CSV with chosen camera angles)</button>
         <button onclick="exportCsv()">📄 Export CSV (SEO Data Only)</button>
       </div>
     </section>
@@ -83,22 +189,26 @@
     <section id="help-section" class="help glass">
       <h2>How It Works (English)</h2>
       <ul>
-        <li><strong>Upload:</strong> Drop or select up to 4 base images (one per page). If none uploaded, realistic placeholders are used automatically.</li>
-        <li><strong>Generate Variants:</strong> Creates the number of variants you chose using the exact pure camera angles you assigned in the dropdowns. Visual differences come only from strong geometric camera work (zoom/crop/framing offsets). No filters, no lighting, no rotation, no stretch.</li>
-        <li><strong>French SEO:</strong> All Alt Text, Title, Caption, Description are full grammatically correct French sentences. Strict 100% uniqueness: no sentence or phrase is reused across any of the 16 fields in the batch.</li>
-        <li><strong>Per-variant controls:</strong> Use 🔎 Fetch or ✨ Generate on any card to refresh only that variant’s SEO while automatically avoiding phrases already used by the other three variants.</li>
-        <li><strong>Editing:</strong> Change text in the table anytime. Character counters turn red if over limit (but generation always produces complete sentences under limits).</li>
-        <li><strong>Exports:</strong> ZIP includes the 4 processed unique JPG variants + full metadata text file + CSV. CSV export is also available separately.</li>
-        <li><strong>Guarantees:</strong> Up to 25 pure camera angles with full manual assignment + one special non-repeatable capture. Shuffled master list ensures the 4 variants always get distinct pairs. Text uniqueness enforced with global phrase tracking + retries.</li>
+        <li><strong>0. SEO Context (NEW):</strong> In this section you type (or paste) the Page URL, Focus Keyphrase (MOST IMPORTANT — will be injected with top priority), page content, and optional global preset. <strong>When you later click the Generate button, the system will automatically read whatever you have typed right now in this section and use it to create the French title, caption, description, and alt text for the generated variant images only</strong> (never applied to the source photo). No need to click Save first — just type your keyword + URL and hit Generate.</li>
+        <li><strong>Upload:</strong> Drop or select your base photo(s) — the truck image or any photo. Multiple bases are cycled. If none uploaded, placeholders are used.</li>
+        <li><strong>Assign Angles:</strong> Use the dropdowns (or the Randomize button) to give every variant an explicit pure camera angle. You can request any number of variants (1 picture at a time, 10 variations, 100 at once, etc.). There are 25 angle types available — they cycle automatically if you ask for more than 25. Full manual control for every single variant.</li>
+        <li><strong>Generate:</strong> Click “✨ Generate Images with These Angles”. You can type any number (1 picture at a time, 10 variations, 100 at once, etc.). Visual differences come <strong>only</strong> from real geometric camera work: extreme zoom (0.38× ultra-wide to 8.8× macro) + very large crop offsets (e.g. −0.52, +0.55, +0.48). Results look like completely new photos taken from whole new positions/angles — matching the Big Ben collage style exactly. <strong>Original aspect ratio preserved 100%</strong> — clean crop/zoom, no stretch, no black bars, no rotation, no filters of any kind. At the exact moment you click Generate, the current Page URL + Focus Keyphrase you typed above are read and used to create the French SEO (title/caption/desc/alt) for the variant images only.</li>
+        <li><strong>French SEO:</strong> Automatically generated using the exact camera concept + your saved focus keyphrase (highest priority) + page content + global preset. 100% unique complete sentences across the entire batch. Per-variant Fetch/Generate refreshes only that row while maintaining uniqueness.</li>
+        <li><strong>Gallery &amp; Table:</strong> Each card and table row shows the chosen camera + full “Camera angle: [concept]” that drove the SEO. Edit text live with character counters.</li>
+        <li><strong>Exports:</strong> ZIP contains all variant images (in chosen JPG/PNG/WEBP) + metadata.txt (angles + concepts + SEO) + full CSV. Separate CSV export also available.</li>
+        <li><strong>Guarantees:</strong> Every variant uses a distinct camera angle. Every French phrase/sentence is unique. No two variants ever look the same. No stretch, no black, no rotation, no filters.</li>
       </ul>
       <p style="margin-top:16px; font-size:12px; color:#8e8e93;">
-        Double-click this <code>index.html</code> to run locally. No server or internet required. All processing happens in your browser.
+        <strong>Tip for collage-style results:</strong> You can request any number of variants (1 at a time, 10, 100, etc.). Assign (or randomize) a mix of extreme angles — e.g. “Extreme Close-up Detail”, “Dramatic Low Angle Perspective”, “High Angle Compressed View”, “Side Profile Pushed to Edge”, and “🎲 Unique One-Time Capture”. Upload your photo, type your Focus Keyphrase + optional Page URL in section 0, then click Generate. You will see fully new different photos from completely new angles — exactly like the attached Big Ben example. SEO (French title/caption/desc/alt) for the variant images is created at generation time from the keyword + URL you provided.
+      </p>
+      <p style="margin-top:12px; font-size:12px; color:#8e8e93;">
+        Double-click this <code>index.html</code> to run locally. No server or internet required for core functionality (fetch uses public proxy for convenience). All processing is 100% client-side in your browser.
       </p>
     </section>
   </main>
 
   <footer>
-    Image Variant v4.1 — Clean glassmorphism UI • 100% client-side • English UI / French SEO
+    Image Variant v4.1.3 — Clean glassmorphism UI • 100% client-side • Pure Camera Angles / Framing Only • English UI / French SEO on variants
   </footer>
 
   <script src="js/jszip.min.js"></script>

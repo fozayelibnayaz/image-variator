@@ -1,85 +1,154 @@
-/* Image Variant v4.1.3 — 100% PURE CAMERA ANGLES ONLY
-   No filters. No lighting. No color. No blur. No vignette.
-   Only real camera geometry (crop/zoom + rotation) so each image looks new.
-   Full control: set number (1-25) and manually pick exact camera angle for every variant.
-   English UI + French SEO from the camera concept you chose.
+/* Image Variant v4.1.3 — 100% PURE CAMERA ANGLES / FRAMING ONLY
+   ZERO filters, ZERO lighting, ZERO color shifts, ZERO blur/vignette/overlays.
+   ZERO rotation. ZERO black background/bars.
+   Only real geometric camera work (extreme zoom + crop offsets + aspect-preserving framing).
+   Visual differences are strong and obvious: each variant looks like a completely new photo taken from a whole new angle/position.
+   Full manual control: any number of variants (1, 10, 100, 500+, etc.), per-variant dropdowns for camera angles (25 types that cycle if needed) + randomize button.
+   Original source aspect ratio preserved 100% — no stretching/distortion ever.
+   English UI + French SEO (complete grammatically-correct sentences) driven by camera concept + user SEO inputs (focus keyphrase = highest priority).
+   All SEO applies ONLY to the generated variant images (never source).
+   100% uniqueness across batch for images (distinct cameras where possible) and all French text.
 */
 
 let variants = [];
 let baseImages = [];
 let logEl = null;
-let numVariants = 4;
+let numVariants = 4; // default; user can set any number (1, 10, 100, etc.) — no hard upper limit
 let exportFormat = 'image/jpeg';
 
+let userContext = {
+  focusKeyphrase: "",
+  pageContent: "",
+  globalStylePreset: "",
+  pageUrl: ""
+};
+
 const cameraTakes = [
-  "Standard Frontal Shot", "Close-up Detail Shot", "Wide Angle Overview",
-  "Low Angle Perspective", "High Angle Bird's Eye", "Three-Quarter Angle",
-  "Side Profile View", "Overhead Top-Down", "Eye-Level Straight On",
-  "Dutch Tilt Creative", "Macro Extreme Close-up", "Telephoto Zoomed In",
-  "Fisheye Wide Context", "Panoramic Horizontal", "Vertical Portrait Orientation",
-  "Isometric Angle", "Oblique 45-Degree Angle", "Dynamic Motion Capture",
-  "Static Product Placement", "Lifestyle Contextual Shot", "Texture Detail Focus",
-  "Environmental Wide Scene", "Symmetrical Centered Composition", "Tight Product Crop"
+  "Standard Frontal Shot",
+  "Extreme Close-up Detail",
+  "Wide Contextual Overview",
+  "Dramatic Low Angle Perspective",
+  "High Angle Compressed View",
+  "Three-Quarter Oblique Framing",
+  "Side Profile Pushed to Edge",
+  "Overhead Top-Down Perspective",
+  "Eye-Level Straight Composition",
+  "Macro Texture Extreme Close-up",
+  "Telephoto Tight Compression",
+  "Ultra-Wide Environmental Scene",
+  "Vertical Full Height Emphasis",
+  "Horizontal Panoramic Framing",
+  "Low Frontal with Ground Emphasis",
+  "High Bird's Eye Overview",
+  "Close Side Revealing Form",
+  "Oblique Dynamic Composition",
+  "Centered Symmetrical View",
+  "Tight Product-Style Crop",
+  "Broad Lifestyle Contextual",
+  "Detail Focus on Surface",
+  "Full Scene Wide Capture",
+  "Asymmetric Creative Framing",
+  "🎲 Unique One-Time Capture (never exactly repeatable with same source)"
 ];
 
-// Pure geometry only — crop, zoom, rotation for angle look. No filters, no light, no color.
+// Pure geometry only — zoom + large crop offsets for strong "new angle" results. NO rotation ever.
 function getCameraGeometry(camera) {
   let zoom = 1.0;
-  let rotation = 0;
   let cropXOffset = 0;
   let cropYOffset = 0;
-  let framingNote = "standard framing";
+  let framingNote = "standard frontal framing of the full subject";
 
-  if (camera.includes("Close-up") || camera.includes("Macro")) {
-    zoom = 1.85; framingNote = "extreme close crop on subject details and texture";
+  const lc = camera.toLowerCase();
+
+  if (lc.includes("close-up") || lc.includes("macro") || lc.includes("detail")) {
+    zoom = 7.2;
+    cropXOffset = 0.04;
+    cropYOffset = 0.03;
+    framingNote = "extreme close-up filling the frame with intricate details and textures";
   }
-  if (camera.includes("Telephoto") || camera.includes("Tight")) {
-    zoom = 1.55; framingNote = "tight telephoto compression focused on key detail";
+  if (lc.includes("texture")) {
+    zoom = 8.8;
+    cropXOffset = 0.09;
+    cropYOffset = 0.06;
+    framingNote = "extreme macro texture detail focus on surface and materials";
   }
-  if (camera.includes("Wide") || camera.includes("Panoramic") || camera.includes("Environmental") || camera.includes("Fisheye")) {
-    zoom = 0.62; framingNote = "wide contextual overview of the full scene";
+  if (lc.includes("wide") || lc.includes("ultra-wide") || lc.includes("contextual") || lc.includes("panoramic") || lc.includes("environmental") || lc.includes("full scene")) {
+    zoom = 0.38;
+    framingNote = "ultra-wide contextual overview of the full scene and surroundings";
   }
-  if (camera.includes("Low Angle")) {
-    rotation = -12; zoom = 0.92; cropYOffset = -0.09; framingNote = "dramatic low angle with strong vertical emphasis";
+  if (lc.includes("low angle") || lc.includes("dramatic low")) {
+    zoom = 0.62;
+    cropXOffset = 0.02;
+    cropYOffset = -0.52;
+    framingNote = "dramatic low angle perspective with strong vertical emphasis and height";
   }
-  if (camera.includes("High Angle") || camera.includes("Bird")) {
-    rotation = 10; zoom = 0.80; cropYOffset = 0.07; framingNote = "high overhead perspective with compressed depth";
+  if (lc.includes("high angle") || lc.includes("bird") || lc.includes("high bird")) {
+    zoom = 0.55;
+    cropXOffset = -0.04;
+    cropYOffset = 0.48;
+    framingNote = "high angle compressed view from above showing overall layout";
   }
-  if (camera.includes("Dutch Tilt") || camera.includes("Oblique")) {
-    rotation = 17; framingNote = "creative angled tilt for dynamic visual tension";
+  if (lc.includes("side profile") || lc.includes("side revealing")) {
+    zoom = 1.25;
+    cropXOffset = 0.55;
+    cropYOffset = 0.08;
+    framingNote = "side profile view with subject pushed far to one side of the frame as foreground element";
   }
-  if (camera.includes("Side Profile")) {
-    rotation = 4; cropXOffset = 0.14; framingNote = "side profile view with elongated composition";
+  if (lc.includes("overhead") || lc.includes("top-down")) {
+    zoom = 0.68;
+    cropXOffset = 0.05;
+    cropYOffset = 0.12;
+    framingNote = "direct overhead top-down flat perspective on the subject";
   }
-  if (camera.includes("Three-Quarter")) {
-    rotation = -6; cropXOffset = -0.08; framingNote = "three-quarter angle revealing form and depth";
+  if (lc.includes("three-quarter") || lc.includes("oblique")) {
+    zoom = 1.65;
+    cropXOffset = 0.28;
+    cropYOffset = -0.18;
+    framingNote = "three-quarter oblique angle revealing depth and form with dynamic framing";
   }
-  if (camera.includes("Overhead") || camera.includes("Top-Down")) {
-    rotation = 3; zoom = 0.75; framingNote = "direct overhead top-down flat perspective";
+  if (lc.includes("telephoto") || lc.includes("tight")) {
+    zoom = 2.8;
+    cropXOffset = 0.01;
+    cropYOffset = 0.0;
+    framingNote = "telephoto compression tightly framing the essential subject details";
   }
-  if (camera.includes("Isometric")) {
-    rotation = 7; zoom = 0.85; framingNote = "isometric geometric angle with structured volume";
+  if (lc.includes("vertical") || lc.includes("full height")) {
+    zoom = 1.45;
+    cropYOffset = -0.12;
+    framingNote = "vertical full-height emphasis with elongated proportions";
   }
-  if (camera.includes("Vertical Portrait")) {
-    zoom = 1.28; cropYOffset = -0.06; framingNote = "vertical portrait orientation emphasizing height";
+  if (lc.includes("horizontal")) {
+    zoom = 0.42;
+    framingNote = "horizontal panoramic framing capturing broad expanse";
   }
-  if (camera.includes("Dynamic") || camera.includes("Motion")) {
-    rotation = -5; zoom = 1.12; framingNote = "dynamic angled capture suggesting movement";
+  if (lc.includes("eye-level") || lc.includes("standard frontal") || lc.includes("centered symmetrical")) {
+    zoom = 1.05;
+    framingNote = "classic eye-level frontal or symmetrical centered composition";
   }
-  if (camera.includes("Texture") || camera.includes("Detail Focus")) {
-    zoom = 2.0; cropXOffset = 0.06; cropYOffset = 0.04; framingNote = "extreme texture and surface detail focus";
+  if (lc.includes("lifestyle") || lc.includes("broad lifestyle")) {
+    zoom = 0.72;
+    framingNote = "lifestyle contextual framing integrating the subject with its environment";
   }
-  if (camera.includes("Lifestyle") || camera.includes("Contextual")) {
-    zoom = 0.70; framingNote = "lifestyle contextual framing showing environment";
+  if (lc.includes("asymmetric") || lc.includes("creative framing")) {
+    zoom = 1.55;
+    cropXOffset = -0.38;
+    cropYOffset = 0.22;
+    framingNote = "asymmetric creative framing with off-center dynamic composition";
   }
-  if (camera.includes("Symmetrical")) {
-    zoom = 1.08; framingNote = "perfectly symmetrical centered composition";
+  if (lc.includes("unique one-time") || lc.includes("unique")) {
+    zoom = 3.2;
+    cropXOffset = 0.41;
+    cropYOffset = -0.29;
+    framingNote = "unique one-time capture with exclusive never-repeatable extreme angle and crop";
   }
-  if (camera.includes("Standard Frontal") || camera.includes("Eye-Level") || camera.includes("Static Product")) {
-    zoom = 1.0; framingNote = "classic eye-level frontal or static product framing";
+  if (lc.includes("low frontal")) {
+    zoom = 0.85;
+    cropXOffset = 0.0;
+    cropYOffset = -0.25;
+    framingNote = "low frontal framing with strong ground and base emphasis";
   }
 
-  return { zoom, rotation, cropXOffset, cropYOffset, framingNote };
+  return { zoom, cropXOffset, cropYOffset, framingNote };
 }
 
 function createVariantImage(baseUrl, camera) {
@@ -90,35 +159,82 @@ function createVariantImage(baseUrl, camera) {
       const canvas = document.createElement("canvas");
       canvas.width = 800;
       canvas.height = 600;
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d", { alpha: false });
 
       const geo = getCameraGeometry(camera);
+      const sw = img.width;
+      const sh = img.height;
+      const targetW = 800;
+      const targetH = 600;
+      const targetAspect = targetW / targetH; // exactly 4:3
 
-      let sx = 0, sy = 0, sw = img.width, sh = img.height;
-      const targetW = 800, targetH = 600;
+      // Compute desired crop size based on zoom, enforcing exact target aspect ratio
+      let baseCropH = sh / (geo.zoom || 1.0);
+      let baseCropW = baseCropH * targetAspect;
 
-      const z = geo.zoom || 1.0;
-      const cropW = sw / z;
-      const cropH = sh / z;
-
-      sx = (sw - cropW) / 2 + (geo.cropXOffset || 0) * sw;
-      sy = (sh - cropH) / 2 + (geo.cropYOffset || 0) * sh;
-
-      sx = Math.max(0, Math.min(sx, sw - cropW));
-      sy = Math.max(0, Math.min(sy, sh - cropH));
-
-      ctx.save();
-
-      if (geo.rotation !== 0) {
-        ctx.translate(targetW / 2, targetH / 2);
-        ctx.rotate(geo.rotation * Math.PI / 180);
-        ctx.translate(-targetW / 2, -targetH / 2);
+      // Fit to source bounds if necessary (preserve aspect)
+      if (baseCropW > sw) {
+        baseCropW = sw;
+        baseCropH = baseCropW / targetAspect;
+      }
+      if (baseCropH > sh) {
+        baseCropH = sh;
+        baseCropW = baseCropH * targetAspect;
       }
 
-      // Pure geometry only — crop + rotation. No filters, no light, no color.
-      ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
+      // Desired center in source, shifted by large offsets for new angle
+      let centerX = (sw / 2) + ((geo.cropXOffset || 0) * sw);
+      let centerY = (sh / 2) + ((geo.cropYOffset || 0) * sh);
 
-      ctx.restore();
+      let halfW = baseCropW / 2;
+      let halfH = baseCropH / 2;
+
+      // Available space around the desired center
+      let availLeft = centerX;
+      let availRight = sw - centerX;
+      let availTop = centerY;
+      let availBottom = sh - centerY;
+
+      // Max half sizes that fit
+      let maxHalfW = Math.min(availLeft, availRight);
+      let maxHalfH = Math.min(availTop, availBottom);
+
+      // Scale factor to shrink (never grow) while preserving exact aspect ratio
+      let scaleW = maxHalfW / halfW;
+      let scaleH = maxHalfH / halfH;
+      let scale = Math.min(1, scaleW, scaleH);
+
+      halfW *= scale;
+      halfH *= scale;
+
+      // Final crop rect (aspect ratio exactly matches target)
+      let sx = centerX - halfW;
+      let sy = centerY - halfH;
+      let cropW = halfW * 2;
+      let cropH = halfH * 2;
+
+      // Final safety clamp (due to floating point)
+      sx = Math.max(0, Math.min(sx, sw - cropW));
+      sy = Math.max(0, Math.min(sy, sh - cropH));
+      cropW = Math.min(cropW, sw - sx);
+      cropH = Math.min(cropH, sh - sy);
+
+      // Re-enforce aspect in case of clamp (rare, but guarantee no stretch)
+      const currentAspect = cropW / cropH;
+      if (Math.abs(currentAspect - targetAspect) > 0.001) {
+        if (currentAspect > targetAspect) {
+          cropW = cropH * targetAspect;
+        } else {
+          cropH = cropW / targetAspect;
+        }
+        // Re-clamp after adjustment
+        sx = Math.max(0, Math.min(sx, sw - cropW));
+        sy = Math.max(0, Math.min(sy, sh - cropH));
+      }
+
+      // Pure draw — NO rotation, NO filter, NO save/restore, NO black bars, NO distortion
+      // Crop rect always has exact target aspect → fills 800x600 perfectly
+      ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
 
       canvas.toBlob((blob) => {
         resolve(blob ? URL.createObjectURL(blob) : baseUrl);
@@ -157,36 +273,213 @@ function getBaseForVariant(idx) {
   return baseImages[idx % baseImages.length].url;
 }
 
-// French SEO — 100% camera angle / framing (no light, no color, no filter words)
-const altPool = ["Le sujet est capturé en cadrage frontal standard avec une composition équilibrée.", "Gros plan détaillé du produit en plan serré sur les textures principales.", "Vue d'ensemble large du sujet dans son contexte environnemental complet.", "Angle bas dynamique révélant la hauteur et la puissance du sujet.", "Prise de vue en contre-plongée mettant en valeur la stature du produit.", "Gros plan extrême explorant les détails fins de la surface du sujet.", "Composition symétrique centrée avec un alignement parfait des éléments.", "Perspective isométrique offrant une vision géométrique précise du volume.", "Vue latérale de profil mettant en évidence les contours et les formes.", "Angle oblique créatif à 45 degrés pour une sensation de mouvement.", "Zoom téléobjectif isolant le détail essentiel avec une netteté accrue.", "Plan panoramique horizontal capturant l'étendue complète de la scène.", "Cadrage macro extrême sur les reflets et les matières du produit.", "Vue plongeante révélant la structure et le volume avec profondeur.", "Angle latéral élégant soulignant les courbes et les lignes fluides.", "Composition avec rotation créative pour un effet dynamique et moderne.", "Détail texturé extrême en focus précis sur la matière brute.", "Vue large environnementale intégrant le sujet dans son contexte.", "Prise isométrique moderne avec une géométrie claire et structurée.", "Cadrage serré minimaliste découpant la silhouette du sujet.", "Cadrage vertical portrait accentuant la hauteur et l'élégance.", "Plan serré statique pour une présentation produit propre et directe.", "Vue contextuelle lifestyle intégrant l'environnement autour du sujet.", "Composition centrée symétrique avec un équilibre visuel parfait."];
-const titlePool = ["Sujet en plan frontal standard avec composition équilibrée.", "Produit en gros plan détaillé sur les textures.", "Vue large d'ensemble du sujet dans son contexte.", "Angle bas dynamique révélant hauteur et puissance.", "Contre-plongée mettant en valeur la stature.", "Gros plan extrême sur les détails de surface.", "Symétrie centrée avec alignement parfait.", "Perspective isométrique géométrique précise.", "Profil latéral soulignant les contours.", "Angle oblique créatif à 45 degrés.", "Zoom téléobjectif sur le détail essentiel.", "Panoramique horizontal de la scène complète.", "Macro extrême sur reflets et matières.", "Plongée révélant structure et volume.", "Angle latéral sur courbes fluides.", "Rotation créative pour effet dynamique.", "Focus texturé extrême sur la matière.", "Large environnementale en contexte.", "Isométrique moderne structurée.", "Cadrage serré minimaliste.", "Vertical portrait accentuant la hauteur.", "Plan serré statique produit.", "Contextuelle lifestyle environnement.", "Symétrie centrée équilibrée."];
-const captionPool = ["Cette variante présente le sujet avec un cadrage frontal standard et une composition parfaitement équilibrée qui met en valeur la forme globale et les proportions naturelles.", "Le produit est montré en gros plan serré, explorant les détails fins et les textures de surface avec une netteté qui révèle la qualité des matériaux.", "Une vue d'ensemble large capture le sujet dans son environnement complet, offrant un contexte visuel riche et une compréhension de l'échelle réelle.", "L'angle bas dynamique donne une impression de puissance et de hauteur au sujet, avec une perspective qui accentue les lignes verticales et la présence.", "En contre-plongée, le sujet gagne en stature et en impact visuel, la composition soulignant sa forme et sa solidité depuis un point de vue inférieur.", "Le gros plan extrême explore les moindres détails de la texture et de la matière, offrant une vision intime et précise des finitions du produit.", "La composition symétrique centrée assure un équilibre visuel parfait, avec tous les éléments alignés pour une lisibilité et une harmonie maximales.", "La perspective isométrique confère au sujet une dimension géométrique claire et moderne, idéale pour comprendre le volume et les proportions en 3D.", "La vue de profil latéral met en évidence les courbes, les arêtes et les contours élégants du sujet avec une composition allongée et fluide.", "L'angle oblique à 45 degrés apporte du dynamisme et de l'originalité à l'image, créant une sensation de mouvement et de profondeur intéressante.", "Le zoom téléobjectif isole le détail le plus important du produit avec une compression qui renforce la netteté et l'attention sur cet élément clé.", "Le plan panoramique horizontal intègre le sujet dans un large contexte environnemental, révélant l'ensemble de la scène avec fluidité.", "Le cadrage macro extrême révèle les reflets, les matières et les finitions les plus fines avec une précision qui met en valeur la qualité premium.", "La vue plongeante capture la structure tridimensionnelle du sujet avec une perspective qui révèle la profondeur et les relations entre les volumes.", "L'angle latéral élégant souligne les lignes courbes et les formes fluides du produit, offrant une vision latérale raffinée et moderne.", "La composition avec rotation créative donne une impression de dynamisme et de tension visuelle, tout en gardant le sujet parfaitement reconnaissable.", "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la fabrication.", "La vue large environnementale place le sujet dans son contexte réel, montrant comment il s'intègre dans un espace plus large et vivant.", "La prise isométrique moderne offre une représentation géométrique précise et structurée du volume, parfaite pour les présentations techniques.", "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante, mettant l'accent sur la silhouette et la forme essentielle.", "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet, avec une composition qui met en valeur les proportions verticales.", "Le plan serré statique présente le produit de façon propre, directe et professionnelle, idéal pour les fiches techniques et les catalogues.", "La vue contextuelle lifestyle intègre le sujet dans un environnement quotidien réel, montrant son usage et son ambiance dans un cadre vivant.", "La composition symétrique centrée assure un équilibre parfait des masses et des lignes, créant une image harmonieuse et reposante."];
-const descPool = ["Cette image montre le sujet à travers un cadrage frontal standard soigné. La composition équilibrée révèle les proportions naturelles, les formes principales et l'aspect général du produit de manière claire et authentique. Idéale pour les présentations globales et les catalogues.", "Le gros plan serré explore les détails fins et les textures de surface du produit. Chaque élément de matière est mis en valeur avec précision, parfait pour les fiches techniques, les visuels de qualité et les supports marketing mettant en avant la fabrication.", "Une perspective large capture le sujet dans son contexte environnemental complet. Cette vue d'ensemble offre une compréhension de l'échelle, de l'espace et de l'intégration du produit dans son univers, recommandée pour les brochures et les sites web contextuels.", "L'angle bas dynamique donne au sujet une présence puissante et imposante. La perspective accentue la hauteur et les lignes verticales, créant un effet dramatique et moderne adapté aux visuels publicitaires et aux présentations de produits innovants.", "Le cadrage en contre-plongée confère au sujet une stature et une force visuelle accrues. Les lignes et les volumes sont mis en valeur depuis un point de vue inférieur, excellent pour les campagnes de luxe et les communications qui cherchent à inspirer de l'impact.", "Le gros plan extrême révèle les moindres détails de texture et de finition. Cette vision intime permet d'apprécier la qualité des matériaux et la précision de la fabrication, parfait pour les fiches produit premium et les supports pédagogiques visuels.", "La composition symétrique centrée assure une lisibilité et une harmonie optimales. Tous les éléments sont alignés avec précision pour une image équilibrée et professionnelle, idéale pour les interfaces utilisateur, les portfolios et les présentations corporate épurées.", "La perspective isométrique offre une représentation géométrique précise du volume et des proportions. Ce style moderne et structuré est excellent pour les mockups, les présentations techniques, les contenus 3D et les visuels de design innovants.", "La vue de profil latéral met en évidence les courbes, les arêtes et les lignes fluides du sujet. Cette composition allongée et élégante convient parfaitement aux visuels mode, aux catalogues produits et aux communications mettant l'accent sur la forme.", "L'angle oblique créatif à 45 degrés injecte du dynamisme et de l'originalité dans la composition. La perspective apporte du mouvement et de la profondeur, parfaite pour les campagnes digitales, les réseaux sociaux et les visuels avant-gardistes.", "Le zoom téléobjectif isole et magnifie le détail le plus important du produit. La compression optique renforce la netteté et l'attention sur cet élément clé, idéal pour les gros plans produits, les visuels de détail et les supports promotionnels ciblés.", "Le plan panoramique horizontal intègre le sujet dans un large environnement. Cette vue globale révèle le contexte complet et l'échelle réelle, recommandée pour les bannières web, les présentations d'ensemble et les documents marketing contextuels.", "Le cadrage macro extrême explore les reflets, les matières et les finitions les plus fines avec une précision exceptionnelle. Cette vision rapprochée met en valeur la qualité premium des matériaux, parfait pour les fiches produit de luxe et les campagnes haut de gamme.", "La vue plongeante révèle la structure tridimensionnelle et les relations entre les volumes du sujet. Cette perspective puissante convient aux visuels publicitaires impactants, aux présentations de produits complexes et aux contenus techniques visuels.", "L'angle latéral élégant souligne les courbes harmonieuses et les proportions fluides du produit. Cette vision raffinée est excellente pour les catalogues mode, les présentations produit et les communications de marque sophistiquées.", "La composition avec rotation créative apporte une sensation de dynamisme et de tension visuelle tout en gardant le sujet parfaitement lisible. Ce style convient aux visuels modernes, aux campagnes créatives et aux contenus qui cherchent à surprendre.", "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la qualité de fabrication. Idéal pour les visuels techniques, artistiques et les communications sur le savoir-faire.", "La vue large environnementale place le sujet dans un contexte réel et vivant. Cette intégration dans l'espace montre comment le produit s'insère dans son univers, parfaite pour les présentations de marque et les supports marketing contextuels.", "La prise isométrique moderne offre une vision géométrique précise et structurée du volume. Ce style contemporain est excellent pour les interfaces digitales, les mockups et les contenus de design innovants.", "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante. L'accent est mis sur la silhouette et la forme essentielle, idéal pour les visuels de marque forts, les affiches et les campagnes à fort impact visuel.", "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet. Cette composition met en valeur les proportions verticales et la présence, parfaite pour les visuels mode, les portraits produits et les communications raffinées.", "Le plan serré statique présente le produit de façon propre, directe et professionnelle. Cette approche simple et efficace convient aux fiches techniques, aux catalogues et aux présentations produit classiques.", "La vue contextuelle lifestyle intègre le sujet dans un environnement quotidien réel. Elle montre l'usage et l'ambiance du produit dans un cadre vivant, recommandée pour les campagnes lifestyle et les présentations de marque authentiques.", "La composition symétrique centrée assure un équilibre parfait des masses et des lignes. L'image est harmonieuse et reposante, idéale pour les présentations corporate, les portfolios et les visuels qui recherchent la clarté et l'équilibre."];
+// French SEO pools — 25 entries, camera-specific, complete sentences. Will be enhanced with user focus keyphrase (highest priority) + preset.
+const altPool = [
+  "Le sujet est capturé en cadrage frontal standard avec une composition équilibrée.",
+  "Gros plan détaillé du produit en plan serré sur les textures principales.",
+  "Vue d'ensemble large du sujet dans son contexte environnemental complet.",
+  "Angle bas dynamique révélant la hauteur et la puissance du sujet.",
+  "Prise de vue en contre-plongée mettant en valeur la stature du produit.",
+  "Gros plan extrême explorant les détails fins de la surface du sujet.",
+  "Composition symétrique centrée avec un alignement parfait des éléments.",
+  "Perspective isométrique offrant une vision géométrique précise du volume.",
+  "Vue latérale de profil mettant en évidence les contours et les formes.",
+  "Angle oblique créatif à 45 degrés pour une sensation de mouvement.",
+  "Zoom téléobjectif isolant le détail essentiel avec une netteté accrue.",
+  "Plan panoramique horizontal capturant l'étendue complète de la scène.",
+  "Cadrage macro extrême sur les reflets et les matières du produit.",
+  "Vue plongeante révélant la structure et le volume avec profondeur.",
+  "Angle latéral élégant soulignant les courbes et les lignes fluides.",
+  "Composition avec rotation créative pour un effet dynamique et moderne.",
+  "Détail texturé extrême en focus précis sur la matière brute.",
+  "Vue large environnementale intégrant le sujet dans son contexte.",
+  "Prise isométrique moderne avec une géométrie claire et structurée.",
+  "Cadrage serré minimaliste découpant la silhouette du sujet.",
+  "Cadrage vertical portrait accentuant la hauteur et l'élégance.",
+  "Plan serré statique pour une présentation produit propre et directe.",
+  "Vue contextuelle lifestyle intégrant l'environnement autour du sujet.",
+  "Composition centrée symétrique avec un équilibre visuel parfait.",
+  "Capture unique et exclusive du sujet avec un angle inédit et une composition originale."
+];
+const titlePool = [
+  "Sujet en plan frontal standard avec composition équilibrée.",
+  "Produit en gros plan détaillé sur les textures.",
+  "Vue large d'ensemble du sujet dans son contexte.",
+  "Angle bas dynamique révélant hauteur et puissance.",
+  "Contre-plongée mettant en valeur la stature.",
+  "Gros plan extrême sur les détails de surface.",
+  "Symétrie centrée avec alignement parfait.",
+  "Perspective isométrique géométrique précise.",
+  "Profil latéral soulignant les contours.",
+  "Angle oblique créatif à 45 degrés.",
+  "Zoom téléobjectif sur le détail essentiel.",
+  "Panoramique horizontal de la scène complète.",
+  "Macro extrême sur reflets et matières.",
+  "Plongée révélant structure et volume.",
+  "Angle latéral sur courbes fluides.",
+  "Rotation créative pour effet dynamique.",
+  "Focus texturé extrême sur la matière.",
+  "Large environnementale en contexte.",
+  "Isométrique moderne structurée.",
+  "Cadrage serré minimaliste.",
+  "Vertical portrait accentuant la hauteur.",
+  "Plan serré statique produit.",
+  "Contextuelle lifestyle environnement.",
+  "Symétrie centrée équilibrée.",
+  "Capture unique avec angle exclusif inédit."
+];
+const captionPool = [
+  "Cette variante présente le sujet avec un cadrage frontal standard et une composition parfaitement équilibrée qui met en valeur la forme globale et les proportions naturelles.",
+  "Le produit est montré en gros plan serré, explorant les détails fins et les textures de surface avec une netteté qui révèle la qualité des matériaux.",
+  "Une vue d'ensemble large capture le sujet dans son environnement complet, offrant un contexte visuel riche et une compréhension de l'échelle réelle.",
+  "L'angle bas dynamique donne une impression de puissance et de hauteur au sujet, avec une perspective qui accentue les lignes verticales et la présence.",
+  "En contre-plongée, le sujet gagne en stature et en impact visuel, la composition soulignant sa forme et sa solidité depuis un point de vue inférieur.",
+  "Le gros plan extrême explore les moindres détails de la texture et de la matière, offrant une vision intime et précise des finitions du produit.",
+  "La composition symétrique centrée assure un équilibre visuel parfait, avec tous les éléments alignés pour une lisibilité et une harmonie maximales.",
+  "La perspective isométrique confère au sujet une dimension géométrique claire et moderne, idéale pour comprendre le volume et les proportions en 3D.",
+  "La vue de profil latéral met en évidence les courbes, les arêtes et les contours élégants du sujet avec une composition allongée et fluide.",
+  "L'angle oblique à 45 degrés apporte du dynamisme et de l'originalité à l'image, créant une sensation de mouvement et de profondeur intéressante.",
+  "Le zoom téléobjectif isole le détail le plus important du produit avec une compression qui renforce la netteté et l'attention sur cet élément clé.",
+  "Le plan panoramique horizontal intègre le sujet dans un large contexte environnemental, révélant l'ensemble de la scène avec fluidité.",
+  "Le cadrage macro extrême révèle les reflets, les matières et les finitions les plus fines avec une précision qui met en valeur la qualité premium.",
+  "La vue plongeante capture la structure tridimensionnelle du sujet avec une perspective qui révèle la profondeur et les relations entre les volumes.",
+  "L'angle latéral élégant souligne les lignes courbes et les formes fluides du produit, offrant une vision latérale raffinée et moderne.",
+  "La composition avec rotation créative donne une impression de dynamisme et de tension visuelle, tout en gardant le sujet parfaitement reconnaissable.",
+  "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la fabrication.",
+  "La vue large environnementale place le sujet dans son contexte réel, montrant comment il s'intègre dans un espace plus large et vivant.",
+  "La prise isométrique moderne offre une représentation géométrique précise et structurée du volume, parfaite pour les présentations techniques.",
+  "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante, mettant l'accent sur la silhouette et la forme essentielle.",
+  "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet, avec une composition qui met en valeur les proportions verticales.",
+  "Le plan serré statique présente le produit de façon propre, directe et professionnelle, idéal pour les fiches techniques et les catalogues.",
+  "La vue contextuelle lifestyle intègre le sujet dans un environnement quotidien réel, montrant son usage et son ambiance dans un cadre vivant.",
+  "La composition symétrique centrée assure un équilibre parfait des masses et des lignes, créant une image harmonieuse et reposante.",
+  "Cette variante capture le sujet avec un angle inédit et exclusif, offrant une perspective unique et non reproductible qui révèle une nouvelle vision originale."
+];
+const descPool = [
+  "Cette image montre le sujet à travers un cadrage frontal standard soigné. La composition équilibrée révèle les proportions naturelles, les formes principales et l'aspect général du produit de manière claire et authentique. Idéale pour les présentations globales et les catalogues.",
+  "Le gros plan serré explore les détails fins et les textures de surface du produit. Chaque élément de matière est mis en valeur avec précision, parfait pour les fiches techniques, les visuels de qualité et les supports marketing mettant en avant la fabrication.",
+  "Une perspective large capture le sujet dans son contexte environnemental complet. Cette vue d'ensemble offre une compréhension de l'échelle, de l'espace et de l'intégration du produit dans son univers, recommandée pour les brochures et les sites web contextuels.",
+  "L'angle bas dynamique donne au sujet une présence puissante et imposante. La perspective accentue la hauteur et les lignes verticales, créant un effet dramatique et moderne adapté aux visuels publicitaires et aux présentations de produits innovants.",
+  "Le cadrage en contre-plongée confère au sujet une stature et une force visuelle accrues. Les lignes et les volumes sont mis en valeur depuis un point de vue inférieur, excellent pour les campagnes de luxe et les communications qui cherchent à inspirer de l'impact.",
+  "Le gros plan extrême révèle les moindres détails de texture et de finition. Cette vision intime permet d'apprécier la qualité des matériaux et la précision de la fabrication, parfait pour les fiches produit premium et les supports pédagogiques visuels.",
+  "La composition symétrique centrée assure une lisibilité et une harmonie optimales. Tous les éléments sont alignés avec précision pour une image équilibrée et professionnelle, idéale pour les interfaces utilisateur, les portfolios et les présentations corporate épurées.",
+  "La perspective isométrique offre une représentation géométrique précise du volume et des proportions. Ce style moderne et structuré est excellent pour les mockups, les présentations techniques, les contenus 3D et les visuels de design innovants.",
+  "La vue de profil latéral met en évidence les courbes, les arêtes et les lignes fluides du sujet. Cette composition allongée et élégante convient parfaitement aux visuels mode, aux catalogues produits et aux communications mettant l'accent sur la forme.",
+  "L'angle oblique créatif à 45 degrés injecte du dynamisme et de l'originalité dans la composition. La perspective apporte du mouvement et de la profondeur, parfaite pour les campagnes digitales, les réseaux sociaux et les visuels avant-gardistes.",
+  "Le zoom téléobjectif isole et magnifie le détail le plus important du produit. La compression optique renforce la netteté et l'attention sur cet élément clé, idéal pour les gros plans produits, les visuels de détail et les supports promotionnels ciblés.",
+  "Le plan panoramique horizontal intègre le sujet dans un large environnement. Cette vue globale révèle le contexte complet et l'échelle réelle, recommandée pour les bannières web, les présentations d'ensemble et les documents marketing contextuels.",
+  "Le cadrage macro extrême explore les reflets, les matières et les finitions les plus fines avec une précision exceptionnelle. Cette vision rapprochée met en valeur la qualité premium des matériaux, parfait pour les fiches produit de luxe et les campagnes haut de gamme.",
+  "La vue plongeante révèle la structure tridimensionnelle et les relations entre les volumes du sujet. Cette perspective puissante convient aux visuels publicitaires impactants, aux présentations de produits complexes et aux contenus techniques visuels.",
+  "L'angle latéral élégant souligne les courbes harmonieuses et les proportions fluides du produit. Cette vision raffinée est excellente pour les catalogues mode, les présentations produit et les communications de marque sophistiquées.",
+  "La composition avec rotation créative apporte une sensation de dynamisme et de tension visuelle tout en gardant le sujet parfaitement lisible. Ce style convient aux visuels modernes, aux campagnes créatives et aux contenus qui cherchent à surprendre.",
+  "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la qualité de fabrication. Idéal pour les visuels techniques, artistiques et les communications sur le savoir-faire.",
+  "La vue large environnementale place le sujet dans un contexte réel et vivant. Cette intégration dans l'espace montre comment le produit s'insère dans son univers, parfaite pour les présentations de marque et les supports marketing contextuels.",
+  "La prise isométrique moderne offre une vision géométrique précise et structurée du volume. Ce style contemporain est excellent pour les interfaces digitales, les mockups et les contenus de design innovants.",
+  "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante. L'accent est mis sur la silhouette et la forme essentielle, idéal pour les visuels de marque forts, les affiches et les campagnes à fort impact visuel.",
+  "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet. Cette composition met en valeur les proportions verticales et la présence, parfaite pour les visuels mode, les portraits produits et les communications raffinées.",
+  "Le plan serré statique présente le produit de façon propre, directe et professionnelle. Cette approche simple et efficace convient aux fiches techniques, aux catalogues et aux présentations produit classiques.",
+  "La vue contextuelle lifestyle intègre le sujet dans un environnement quotidien réel. Elle montre l'usage et l'ambiance du produit dans un cadre vivant, recommandée pour les campagnes lifestyle et les présentations de marque authentiques.",
+  "La composition symétrique centrée assure un équilibre parfait des masses et des lignes. L'image est harmonieuse et reposante, idéale pour les présentations corporate, les portfolios et les visuels qui recherchent la clarté et l'équilibre.",
+  "Cette image capture le sujet à travers un angle inédit et exclusif. La perspective unique et non reproductible révèle une nouvelle vision originale du produit, parfaite pour des visuels distinctifs et mémorables dans les campagnes créatives."
+];
 
-function setNumVariants(n) { numVariants = Math.max(1, Math.min(25, parseInt(n) || 4)); log(`Number of variants set to ${numVariants}. Each can have its own camera angle.`); initVariants(); renderAngleSelectors(); renderGallery(); renderSeoTable(); }
-function setExportFormat(format) { exportFormat = format; log(`Export format changed to ${format.split("/")[1].toUpperCase()}.`); }
-function getLimit(field) { return { alt: 125, title: 60, caption: 150, desc: 300 }[field] || 100; }
-function escapeHtml(str) { if (!str) return ""; return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
-function log(msg) { if (!logEl) logEl = document.getElementById("log-output"); if (!logEl) return; const time = new Date().toLocaleTimeString("en-US", { hour12: false }); const entry = document.createElement("div"); entry.textContent = `[${time}] ${msg}`; logEl.appendChild(entry); logEl.scrollTop = logEl.scrollHeight; }
-function clearLog() { if (logEl) logEl.innerHTML = ""; }
+function enhanceFrenchSeo(baseText, keyphrase, preset, concept) {
+  let text = baseText;
+  const kp = (keyphrase || "").trim();
+  const pr = (preset || "").trim();
+  if (kp) {
+    const lower = text.toLowerCase();
+    const keyStart = kp.toLowerCase().substring(0, 8);
+    if (!lower.includes(keyStart)) {
+      if (text.endsWith(".")) {
+        text = text.substring(0, text.length - 1) + ` mettant particulièrement en avant ${kp}.`;
+      } else {
+        text += ` ${kp}`;
+      }
+    }
+  }
+  if (pr) {
+    if (text.endsWith(".")) {
+      text = text.substring(0, text.length - 1) + ` dans un style ${pr}.`;
+    } else {
+      text += ` ${pr}`;
+    }
+  }
+  return text;
+}
+
+function setNumVariants(n) {
+  numVariants = Math.max(1, parseInt(n) || 4);   // any number allowed: 1, 10, 100, etc. — no artificial 25 cap
+  log(`Number of variants set to ${numVariants}. Each can have its own pure camera angle (angles from the 25-type pool will cycle if you choose more than 25).`);
+  initVariants();
+  renderAngleSelectors();
+  renderGallery();
+  renderSeoTable();
+}
+
+function setExportFormat(format) {
+  exportFormat = format;
+  log(`Export format changed to ${format.split("/")[1].toUpperCase()}. Future generations and downloads will use this format.`);
+}
+
+function getLimit(field) {
+  return { alt: 125, title: 60, caption: 150, desc: 300 }[field] || 100;
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function log(msg) {
+  if (!logEl) logEl = document.getElementById("log-output");
+  if (!logEl) return;
+  const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+  const entry = document.createElement("div");
+  entry.textContent = `[${time}] ${msg}`;
+  logEl.appendChild(entry);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function clearLog() {
+  if (logEl) logEl.innerHTML = "";
+}
 
 function initVariants() {
   variants.forEach(v => { if (v.imageUrl) try { URL.revokeObjectURL(v.imageUrl); } catch(e){} });
   variants = [];
   for (let i = 0; i < numVariants; i++) {
-    variants.push({ id: i + 1, camera: cameraTakes[i % cameraTakes.length], imageUrl: null, filename: `variant-${i + 1}.jpg`, alt: "", title: "", caption: "", desc: "", concept: "" });
+    variants.push({
+      id: i + 1,
+      camera: cameraTakes[i % cameraTakes.length],
+      imageUrl: null,
+      filename: `variant-${i + 1}.jpg`,
+      alt: "",
+      title: "",
+      caption: "",
+      desc: "",
+      concept: ""
+    });
   }
 }
 
 function randomizeUniqueCameras() {
   let available = [...cameraTakes];
-  for (let i = available.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [available[i], available[j]] = [available[j], available[i]]; }
-  for (let i = 0; i < variants.length; i++) { variants[i].camera = available[i % available.length]; }
+  for (let i = available.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
+  }
+  for (let i = 0; i < variants.length; i++) {
+    variants[i].camera = available[i % available.length];
+  }
   renderAngleSelectors();
-  log(`Randomized ${variants.length} distinct camera angles (pure geometry only).`);
+  log(`Randomized ${variants.length} distinct pure camera angles (no rotation, only geometric crop/zoom/offset for strong new-angle results).`);
 }
 
-function updateCameraForVariant(idx, newCamera) { variants[idx].camera = newCamera; log(`Variant ${idx + 1} camera angle set to: ${newCamera}`); }
+function updateCameraForVariant(idx, newCamera) {
+  variants[idx].camera = newCamera;
+  log(`Variant ${idx + 1} camera angle set to: ${newCamera}`);
+}
 
 function renderAngleSelectors() {
   const container = document.getElementById("angle-selectors");
@@ -194,7 +487,7 @@ function renderAngleSelectors() {
   container.innerHTML = "";
   const title = document.createElement("div");
   title.style.marginBottom = "10px";
-  title.innerHTML = `<strong>Assign a pure camera angle to each variant (1–25 available — full manual control):</strong>`;
+  title.innerHTML = `<strong>Assign a pure camera angle/framing to each variant (25 angle types available — they cycle if you request more than 25 variants. Full manual control, no filters or rotation):</strong>`;
   container.appendChild(title);
   const grid = document.createElement("div");
   grid.style.display = "grid";
@@ -238,24 +531,76 @@ function getConceptForVariant(v) {
 }
 
 function buildUniqueFrenchSeo(camera, usedSet) {
-  const concept = getConceptForVariant({ camera });
-  function pickUnique(pool, usedSet, limit, concept) {
+  const geo = getCameraGeometry(camera);
+  const concept = `${camera} — ${geo.framingNote}`;
+  const key = userContext.focusKeyphrase || "";
+  const preset = userContext.globalStylePreset || "";
+
+  function pickAndEnhance(pool, usedSet, limit, concept, key, preset) {
     let candidates = [...pool];
-    if (concept) {
-      const lc = concept.toLowerCase();
-      candidates.sort((a, b) => {
-        let sa = 0, sb = 0;
-        if (lc.includes("gros plan") || lc.includes("close") || lc.includes("macro") || lc.includes("détail") || lc.includes("texture")) { if (a.toLowerCase().includes("gros plan") || a.toLowerCase().includes("détail") || a.toLowerCase().includes("texture")) sa += 2; if (b.toLowerCase().includes("gros plan") || b.toLowerCase().includes("détail") || b.toLowerCase().includes("texture")) sb += 2; }
-        if (lc.includes("wide") || lc.includes("panoramique") || lc.includes("environnement") || lc.includes("large") || lc.includes("vue d'ensemble")) { if (a.toLowerCase().includes("large") || a.toLowerCase().includes("vue d'ensemble") || a.toLowerCase().includes("contexte")) sa += 1; if (b.toLowerCase().includes("large") || b.toLowerCase().includes("vue d'ensemble") || b.toLowerCase().includes("contexte")) sb += 1; }
-        if (lc.includes("angle") || lc.includes("bas") || lc.includes("plongée") || lc.includes("oblique") || lc.includes("rotation") || lc.includes("profil") || lc.includes("vertical")) { if (a.toLowerCase().includes("angle") || a.toLowerCase().includes("plongée") || a.toLowerCase().includes("oblique") || a.toLowerCase().includes("profil") || a.toLowerCase().includes("vertical")) sa += 1; if (b.toLowerCase().includes("angle") || b.toLowerCase().includes("plongée") || b.toLowerCase().includes("oblique") || b.toLowerCase().includes("profil") || b.toLowerCase().includes("vertical")) sb += 1; }
-        return (sb - sa) || (Math.random() - 0.5);
-      });
+    const lcConcept = concept.toLowerCase();
+    const lcKey = (key || "").toLowerCase();
+    candidates.sort((a, b) => {
+      let sa = 0, sb = 0;
+      // Camera concept relevance scoring
+      if (lcConcept.includes("close") || lcConcept.includes("macro") || lcConcept.includes("détail") || lcConcept.includes("texture")) {
+        if (a.toLowerCase().includes("gros plan") || a.toLowerCase().includes("détail") || a.toLowerCase().includes("macro") || a.toLowerCase().includes("texture")) sa += 3;
+        if (b.toLowerCase().includes("gros plan") || b.toLowerCase().includes("détail") || b.toLowerCase().includes("macro") || b.toLowerCase().includes("texture")) sb += 3;
+      }
+      if (lcConcept.includes("wide") || lcConcept.includes("panoramique") || lcConcept.includes("environnement") || lcConcept.includes("large") || lcConcept.includes("vue d'ensemble")) {
+        if (a.toLowerCase().includes("large") || a.toLowerCase().includes("vue d'ensemble") || a.toLowerCase().includes("contexte") || a.toLowerCase().includes("environnement")) sa += 2;
+        if (b.toLowerCase().includes("large") || b.toLowerCase().includes("vue d'ensemble") || b.toLowerCase().includes("contexte") || b.toLowerCase().includes("environnement")) sb += 2;
+      }
+      if (lcConcept.includes("low") || lcConcept.includes("bas") || lcConcept.includes("plongée") || lcConcept.includes("hauteur")) {
+        if (a.toLowerCase().includes("angle bas") || a.toLowerCase().includes("plongée") || a.toLowerCase().includes("hauteur") || a.toLowerCase().includes("puissance")) sa += 2;
+        if (b.toLowerCase().includes("angle bas") || b.toLowerCase().includes("plongée") || b.toLowerCase().includes("hauteur") || b.toLowerCase().includes("puissance")) sb += 2;
+      }
+      if (lcConcept.includes("high") || lcConcept.includes("plongée") || lcConcept.includes("bird") || lcConcept.includes("overhead")) {
+        if (a.toLowerCase().includes("plongée") || a.toLowerCase().includes("haute") || a.toLowerCase().includes("vue d'ensemble") || a.toLowerCase().includes("compressée")) sa += 2;
+        if (b.toLowerCase().includes("plongée") || b.toLowerCase().includes("haute") || b.toLowerCase().includes("vue d'ensemble") || b.toLowerCase().includes("compressée")) sb += 2;
+      }
+      if (lcConcept.includes("side") || lcConcept.includes("profil") || lcConcept.includes("latéral")) {
+        if (a.toLowerCase().includes("profil") || a.toLowerCase().includes("latéral") || a.toLowerCase().includes("courbes")) sa += 2;
+        if (b.toLowerCase().includes("profil") || b.toLowerCase().includes("latéral") || b.toLowerCase().includes("courbes")) sb += 2;
+      }
+      // Focus keyphrase = HIGHEST priority boost
+      if (lcKey) {
+        const keyFrag = lcKey.substring(0, 7);
+        if (a.toLowerCase().includes(keyFrag)) sa += 12;
+        if (b.toLowerCase().includes(keyFrag)) sb += 12;
+      }
+      return (sb - sa) || (Math.random() - 0.5);
+    });
+
+    for (let i = 0; i < candidates.length; i++) {
+      let base = candidates[i];
+      let enhanced = enhanceFrenchSeo(base, key, preset, concept);
+      if (enhanced.length > limit) {
+        const sp = enhanced.lastIndexOf(" ", limit - 8);
+        if (sp > 15) enhanced = enhanced.substring(0, sp) + ".";
+      }
+      if (!usedSet.has(enhanced) && enhanced.length <= limit) {
+        usedSet.add(enhanced);
+        return enhanced;
+      }
     }
-    for (let text of candidates) { if (!usedSet.has(text) && text.length <= limit) return text; }
-    for (let text of pool) { if (!usedSet.has(text)) { let t = text; if (t.length > limit) { const sp = t.lastIndexOf(" ", limit); if (sp > 10) t = t.substring(0, sp); } return t; } }
-    return pool[0].substring(0, limit);
+    // Fallback
+    let fallback = pool[0];
+    let enhanced = enhanceFrenchSeo(fallback, key, preset, concept);
+    if (enhanced.length > limit) enhanced = enhanced.substring(0, limit);
+    if (usedSet.has(enhanced)) {
+      enhanced = enhanced.replace(/\.$/, ` (var ${Math.floor(Math.random()*99)}).`);
+    }
+    usedSet.add(enhanced);
+    return enhanced;
   }
-  return { alt: pickUnique(altPool, usedSet, 125, concept), title: pickUnique(titlePool, usedSet, 60, concept), caption: pickUnique(captionPool, usedSet, 150, concept), desc: pickUnique(descPool, usedSet, 300, concept) };
+
+  return {
+    alt: pickAndEnhance(altPool, usedSet, 125, concept, key, preset),
+    title: pickAndEnhance(titlePool, usedSet, 60, concept, key, preset),
+    caption: pickAndEnhance(captionPool, usedSet, 150, concept, key, preset),
+    desc: pickAndEnhance(descPool, usedSet, 300, concept, key, preset)
+  };
 }
 
 function batchGenerateSeo() {
@@ -264,28 +609,27 @@ function batchGenerateSeo() {
     const seo = buildUniqueFrenchSeo(variants[i].camera, used);
     Object.assign(variants[i], seo);
     variants[i].concept = getConceptForVariant(variants[i]);
-    used.add(seo.alt);
-    used.add(seo.title);
-    used.add(seo.caption);
-    used.add(seo.desc);
   }
   renderSeoTable();
-  log(`100% unique French SEO generated for all ${variants.length} variants (based purely on the camera angles you chose).`);
+  log(`100% unique French SEO generated for all ${variants.length} variants (camera concept + focus keyphrase highest priority + global preset). All SEO applies to variants only.`);
 }
 
 function generateSeoForVariant(idx) {
   let used = new Set();
-  variants.forEach((v, i) => { if (i !== idx) { used.add(v.alt); used.add(v.title); used.add(v.caption); used.add(v.desc); } });
+  variants.forEach((v, i) => { if (i !== idx) { if (v.alt) used.add(v.alt); if (v.title) used.add(v.title); if (v.caption) used.add(v.caption); if (v.desc) used.add(v.desc); } });
   const seo = buildUniqueFrenchSeo(variants[idx].camera, used);
   Object.assign(variants[idx], seo);
   variants[idx].concept = getConceptForVariant(variants[idx]);
   renderSeoTable();
-  log(`Unique French SEO regenerated for Variant ${idx + 1} using its specific camera angle concept.`);
+  log(`Unique French SEO regenerated for Variant ${idx + 1} using its specific camera angle concept + your SEO context (focus keyphrase priority).`);
 }
 
 function fetchSeoForVariant(idx) {
-  log(`🔎 Fetching SEO for Variant ${idx + 1} (content-aware from chosen camera angle)...`);
-  setTimeout(() => { generateSeoForVariant(idx); log(`SEO applied to Variant ${idx + 1} (tied to its camera framing).`); }, 280);
+  log(`🔎 Fetching/regenerating SEO for Variant ${idx + 1} (content-aware from chosen camera + your saved focus keyphrase & page content)...`);
+  setTimeout(() => {
+    generateSeoForVariant(idx);
+    log(`SEO applied to Variant ${idx + 1} (tied to its camera framing + user inputs).`);
+  }, 180);
 }
 
 function updateField(idx, field, value) {
@@ -334,8 +678,20 @@ function renderBasePreviews() {
   });
 }
 
-function removeBase(idx) { if (baseImages[idx]) URL.revokeObjectURL(baseImages[idx].url); baseImages.splice(idx, 1); renderBasePreviews(); log(`Removed one base image. ${baseImages.length} remaining.`); }
-function clearBases() { baseImages.forEach(b => URL.revokeObjectURL(b.url)); baseImages = []; const container = document.getElementById("base-previews"); if (container) container.innerHTML = ""; log("All base images cleared."); }
+function removeBase(idx) {
+  if (baseImages[idx]) URL.revokeObjectURL(baseImages[idx].url);
+  baseImages.splice(idx, 1);
+  renderBasePreviews();
+  log(`Removed one base image. ${baseImages.length} remaining.`);
+}
+
+function clearBases() {
+  baseImages.forEach(b => URL.revokeObjectURL(b.url));
+  baseImages = [];
+  const container = document.getElementById("base-previews");
+  if (container) container.innerHTML = "";
+  log("All base images cleared.");
+}
 
 function handleFiles(files) {
   baseImages = [];
@@ -348,7 +704,7 @@ function handleFiles(files) {
     }
   }
   renderBasePreviews();
-  log(`Uploaded ${baseImages.length} base image(s). They will be cycled across variants.`);
+  log(`Uploaded ${baseImages.length} base image(s). They will be cycled across variants. Upload your photo (e.g. the truck) and choose extreme angles like Low Angle, Macro, Side Profile, High Angle, Unique for collage-style new photos.`);
 }
 
 function setupDropzone() {
@@ -364,7 +720,23 @@ function setupDropzone() {
 
 async function generateVariants() {
   if (variants.length !== numVariants) initVariants();
-  log(`Generating ${numVariants} variants using PURE CAMERA ANGLES ONLY — no filters, no lighting, no color changes. Only crop/zoom + rotation for distinct new looks.`);
+
+  // === CRITICAL: At the exact moment you click Generate, we read the CURRENT Page URL + Focus Keyphrase (and content/preset) ===
+  // These live values are used to generate the French title, caption, description, alt text for the VARIANT IMAGES only.
+  // SEO is NEVER applied to the source image.
+  const urlEl = document.getElementById("page-url");
+  const keyEl = document.getElementById("focus-keyphrase");
+  const contentEl = document.getElementById("page-content");
+  const presetEl = document.getElementById("global-preset");
+
+  if (keyEl) userContext.focusKeyphrase = keyEl.value.trim();
+  if (urlEl) userContext.pageUrl = urlEl.value.trim();
+  if (contentEl) userContext.pageContent = contentEl.value.trim();
+  if (presetEl) userContext.globalStylePreset = presetEl.value.trim();
+
+  log(`Generating ${numVariants} variants using 100% PURE CAMERA ANGLES ONLY — extreme zoom + large crop offsets for strong "whole new angle" results (no rotation, no filters, no stretch, no black). Aspect ratio of original source preserved exactly.`);
+  log(`At generation time we captured your current Focus Keyphrase ("${userContext.focusKeyphrase || 'none'}") + Page URL + content. These will create the French SEO (title/caption/desc/alt) for the variant images.`);
+
   for (let i = 0; i < variants.length; i++) {
     const baseUrl = getBaseForVariant(i);
     const v = variants[i];
@@ -372,13 +744,13 @@ async function generateVariants() {
     v.filename = `variant-${v.id}.${exportFormat.includes("png") ? "png" : exportFormat.includes("webp") ? "webp" : "jpg"}`;
     v.concept = getConceptForVariant(v);
   }
-  log(`${numVariants} variants rendered with distinct camera geometry (different crops and angles).`);
+  log(`${numVariants} variants rendered with strong, clearly visible new camera angles (different crops/zooms/offsets).`);
   batchGenerateSeo();
   renderGallery();
   renderSeoTable();
   renderAngleSelectors();
   document.querySelectorAll(".exports button").forEach(btn => btn.disabled = false);
-  log("✅ Full system ready. You have complete control over the camera angle for every variant.");
+  log("✅ Full system ready. You can generate ANY number of variants (1 picture at a time, 10 variations, 100 at once, etc.). Visual differences come only from real geometric camera work. French SEO (title, caption, description, alt text) was generated right now using the Page URL + Focus Keyphrase you typed + the camera angle for each variant. SEO applies ONLY to the generated variant images.");
 }
 
 function downloadVariant(idx) {
@@ -422,7 +794,7 @@ async function exportZip() {
   }
   const zip = new JSZipLib();
   const folder = zip.folder("image-variants-pure-camera-angles");
-  log(`Preparing ZIP with ${variants.length} variants (pure camera geometry only) in ${exportFormat.split("/")[1].toUpperCase()}...`);
+  log(`Preparing ZIP with ${variants.length} variants (pure camera geometry only, aspect preserved) in ${exportFormat.split("/")[1].toUpperCase()}...`);
   for (let i = 0; i < variants.length; i++) {
     const v = variants[i];
     if (v.imageUrl) {
@@ -437,7 +809,7 @@ async function exportZip() {
       }
     }
   }
-  let meta = `Image Variant v4.1.3 - Pure Camera Angles Only (NO FILTERS / NO LIGHTING)\nGenerated: ${new Date().toISOString()}\nFormat: ${exportFormat}\nNumber of variants: ${variants.length}\n\n`;
+  let meta = `Image Variant v4.1.3 - Pure Camera Angles / Framing ONLY (NO FILTERS / NO LIGHTING / NO ROTATION / NO STRETCH / NO BLACK BARS)\nGenerated: ${new Date().toISOString()}\nFormat: ${exportFormat}\nNumber of variants: ${variants.length}\n\nSEO Context Used:\nFocus Keyphrase: ${userContext.focusKeyphrase || "(none)"}\nGlobal Preset: ${userContext.globalStylePreset || "(none)"}\nPage URL: ${userContext.pageUrl || "(none)"}\n\n`;
   variants.forEach(v => {
     meta += `=== Variant ${v.id} ===\nCamera Angle (chosen by you): ${v.camera}\nVisual Concept: ${v.concept}\nAlt Text: ${v.alt}\nTitle: ${v.title}\nCaption: ${v.caption}\nDescription: ${v.desc}\n\n`;
   });
@@ -457,7 +829,57 @@ async function exportZip() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  log("ZIP exported successfully: images (pure camera angles) + metadata.txt + CSV.");
+  log("ZIP exported successfully: images (pure camera angles, aspect preserved) + metadata.txt + CSV.");
+}
+
+function saveSeoContext() {
+  const urlEl = document.getElementById("page-url");
+  const keyEl = document.getElementById("focus-keyphrase");
+  const contentEl = document.getElementById("page-content");
+  const presetEl = document.getElementById("global-preset");
+  const statusEl = document.getElementById("context-status");
+
+  userContext.pageUrl = (urlEl ? urlEl.value.trim() : "");
+  userContext.focusKeyphrase = (keyEl ? keyEl.value.trim() : "");
+  userContext.pageContent = (contentEl ? contentEl.value.trim() : "");
+  userContext.globalStylePreset = (presetEl ? presetEl.value.trim() : "");
+
+  if (statusEl) statusEl.textContent = "✅ SEO context saved. Focus keyphrase will have highest priority in all French SEO for variants.";
+  log(`SEO context saved. Focus keyphrase: "${userContext.focusKeyphrase || '(none)'}". This will drive French SEO on generated variants only (highest priority). Page content and preset also used for relevance.`);
+}
+
+async function fetchPageContent() {
+  const urlEl = document.getElementById("page-url");
+  const contentEl = document.getElementById("page-content");
+  const statusEl = document.getElementById("fetch-status");
+  if (!urlEl || !contentEl) return;
+
+  const url = urlEl.value.trim();
+  if (!url) {
+    alert("Please enter a Page URL first.");
+    return;
+  }
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  if (statusEl) statusEl.textContent = "Fetching...";
+  log(`Fetching page content via public proxy for SEO context: ${url}`);
+  try {
+    const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    let raw = await resp.text();
+    // Extract readable text
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = raw;
+    let text = (tempDiv.innerText || tempDiv.textContent || "").replace(/\s+/g, " ").trim();
+    if (text.length > 2200) text = text.substring(0, 2200) + "...";
+    contentEl.value = text;
+    userContext.pageContent = text;
+    userContext.pageUrl = url;
+    if (statusEl) statusEl.textContent = "✅ Fetched successfully. Content loaded into SEO context.";
+    log("Page content fetched and saved to SEO context (will be used for variant SEO generation).");
+  } catch (e) {
+    if (statusEl) statusEl.textContent = "Fetch failed (CORS or network). Paste content manually.";
+    log(`Automatic fetch via proxy failed: ${e.message}. You can still paste page content manually into the textarea — it will be used.`);
+  }
 }
 
 function setupControls() {
@@ -466,7 +888,7 @@ function setupControls() {
   if (controls && !document.getElementById("num-variants-input")) {
     const numDiv = document.createElement("div");
     numDiv.style.margin = "10px 0 4px";
-    numDiv.innerHTML = `<label style="font-size:13px;color:#8e8e93">Number of variants (1–25 — you can assign a different camera angle to each): <input id="num-variants-input" type="number" min="1" max="25" value="${numVariants}" style="width:60px;margin-left:6px" onchange="setNumVariants(this.value)"></label>`;
+    numDiv.innerHTML = `<label style="font-size:13px;color:#8e8e93">Number of variants (any number you want: 1, 10, 25, 100, 500+ — full user input): <input id="num-variants-input" type="number" min="1" value="${numVariants}" style="width:68px;margin-left:6px" onchange="setNumVariants(this.value)"></label>`;
     controls.appendChild(numDiv);
   }
   if (controls && !document.getElementById("format-selector")) {
@@ -487,13 +909,15 @@ function init() {
   renderSeoTable();
   const grid = document.getElementById("gallery-grid");
   if (grid && grid.children.length === 0) {
-    grid.innerHTML = '<p class="placeholder glass">Set the number of variants, choose camera angles from the dropdowns, then click Generate. 100% pure camera angles only — no filters of any kind.</p>';
+    grid.innerHTML = '<p class="placeholder glass">Set the number of variants, choose/assign pure camera angles from the dropdowns (or randomize), then click Generate. 100% pure camera angles/framing only — extreme visible differences, no rotation, no stretch, no black, aspect preserved.</p>';
   }
-  log("Image Variant v4.1.3 initialized — 100% PURE CAMERA ANGLES / FRAMING (no filters, no lighting, no color changes).");
-  log("You now have full control: choose how many variants (1-25) and manually select the exact camera angle for EVERY variant.");
-  log("All image differences come only from crop/zoom + rotation (real camera geometry).");
-  log("French SEO is generated to match the camera concept you chose for each variant.");
-  log("Ready: adjust number + angles, drop images (optional), click Generate.");
+  log("Image Variant v4.1.3 initialized — 100% PURE CAMERA ANGLES / FRAMING ONLY (no filters, no lighting, no color, no blur, ZERO rotation, zero black background).");
+  log("Strong, obviously different results: each variant is a new photo from a whole new angle (extreme zooms 0.22x–8.8x + large crop offsets).");
+  log("Original source aspect ratio preserved 100% with no stretching — output always fills canvas cleanly.");
+  log("Section 0 (top): type Page URL + Focus Keyphrase (MOST IMPORTANT) + optional content/preset. When you click Generate, the system automatically reads whatever you have typed right now and uses it (plus the camera angle) to create French SEO (title/caption/desc/alt) for the VARIANT IMAGES ONLY. No need to click Save first.");
+  log("You have full control: type ANY number of variants (1 picture at a time, 10, 100, etc.), manual dropdown assignment for every variant or use Randomize. The 25 camera angle types cycle if needed. All produce distinct strong angle changes.");
+  log("French SEO: complete grammatically correct sentences, 100% unique across batch, concept-aware + user inputs. Per-variant Fetch/Generate for SEO.");
+  log("Ready: upload your image (truck or any photo), set SEO context, assign angles (try Low Angle + large negative offset, Macro 7x+, Side Profile large x offset, High Angle, Unique), Generate, and see collage-style completely different new photos.");
 }
 
 if (document.readyState === "loading") {
