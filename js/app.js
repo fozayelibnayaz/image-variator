@@ -23,6 +23,8 @@ let userContext = {
   pageUrl: ""
 };
 
+let lastRandomizedCameras = [];
+
 const cameraTakes = [
   "Standard Frontal Shot",
   "Extreme Close-up Detail",
@@ -51,9 +53,10 @@ const cameraTakes = [
   "🎲 Unique One-Time Capture (never exactly repeatable with same source)"
 ];
 
-// Pure geometry only — strong but SAFE zoom + offsets.
-// Every camera now produces a clearly different "new photo from a completely different angle".
-// Offsets are limited so the crop always stays 100% inside the source image → no black, no missing, no stretch.
+// Pure geometry only — EXTREMELY STRONG "new photo from a whole new angle" to exactly match Big Ben collage style.
+// Extreme macro (filling frame like standing right in front of clock face), dramatic low from below full height, high from above, side profile pushed far to edge with foreground, overhead top-down, texture macro, etc.
+// NO rotation, NO filters. Only zoom + large offsets + aspect-preserving crop.
+// The render logic guarantees no black/missing by shrinking the crop around the desired center while preserving exact target aspect ratio.
 function getCameraGeometry(camera) {
   let zoom = 1.0;
   let cropXOffset = 0;
@@ -63,71 +66,79 @@ function getCameraGeometry(camera) {
   const lc = camera.toLowerCase();
 
   if (lc.includes("close-up") || lc.includes("macro") || lc.includes("detail")) {
-    zoom = 5.8; cropXOffset = 0.07; cropYOffset = 0.04;
-    framingNote = "extreme close-up filling the frame with intricate details and textures";
+    zoom = 92.0; cropXOffset = 0.58; cropYOffset = 0.52;
+    framingNote = "extreme close-up filling the entire frame with intricate details and textures (camera positioned right in front of the subject, like extreme macro on clock face)";
   }
   if (lc.includes("texture")) {
-    zoom = 7.0; cropXOffset = 0.10; cropYOffset = 0.07;
-    framingNote = "extreme macro texture detail focus on surface and materials";
+    zoom = 110.0; cropXOffset = 0.62; cropYOffset = 0.58;
+    framingNote = "ultra-macro texture detail focus on surface and materials only (entire frame is one tiny area of the subject)";
   }
   if (lc.includes("wide") || lc.includes("ultra-wide") || lc.includes("contextual") || lc.includes("panoramic") || lc.includes("environmental") || lc.includes("full scene")) {
-    zoom = 0.35; cropXOffset = -0.06; cropYOffset = -0.04;
-    framingNote = "ultra-wide contextual overview of the full scene and surroundings";
+    zoom = 0.055; cropXOffset = -0.68; cropYOffset = -0.52;
+    framingNote = "ultra-wide contextual overview of the full scene and surroundings (camera pulled way back for compressed wide view)";
   }
   if (lc.includes("low angle") || lc.includes("dramatic low")) {
-    zoom = 0.62; cropXOffset = 0.02; cropYOffset = -0.48;
-    framingNote = "dramatic low angle perspective with strong vertical emphasis and height";
+    zoom = 0.13; cropXOffset = 0.18; cropYOffset = -1.38;
+    framingNote = "dramatic low angle perspective with strong vertical emphasis and full height (camera very low on ground looking straight up)";
   }
   if (lc.includes("high angle") || lc.includes("bird") || lc.includes("high bird")) {
-    zoom = 0.52; cropXOffset = -0.05; cropYOffset = 0.46;
-    framingNote = "high angle compressed view from above showing overall layout";
+    zoom = 0.11; cropXOffset = -0.52; cropYOffset = 1.32;
+    framingNote = "high angle compressed view from directly above showing overall layout and structure (camera high up looking down)";
   }
   if (lc.includes("side profile") || lc.includes("side revealing")) {
-    zoom = 1.28; cropXOffset = 0.55; cropYOffset = 0.05;
-    framingNote = "side profile view with subject pushed far to one side of the frame as foreground element";
+    zoom = 4.8; cropXOffset = 1.35; cropYOffset = 0.25;
+    framingNote = "side profile view with subject pushed far to one side of the frame as strong foreground element (camera far to the side)";
   }
   if (lc.includes("overhead") || lc.includes("top-down")) {
-    zoom = 0.58; cropXOffset = 0.06; cropYOffset = 0.15;
-    framingNote = "direct overhead top-down flat perspective on the subject";
+    zoom = 0.09; cropXOffset = 0.45; cropYOffset = 0.82;
+    framingNote = "direct overhead top-down flat perspective on the subject (camera directly above looking straight down)";
   }
   if (lc.includes("three-quarter") || lc.includes("oblique")) {
-    zoom = 1.65; cropXOffset = 0.32; cropYOffset = -0.18;
-    framingNote = "three-quarter oblique angle revealing depth and form with dynamic framing";
+    zoom = 8.2; cropXOffset = 1.15; cropYOffset = -0.92;
+    framingNote = "three-quarter oblique angle revealing depth and form with dynamic framing (45-degree camera position)";
   }
   if (lc.includes("telephoto") || lc.includes("tight")) {
-    zoom = 3.0; cropXOffset = 0.01; cropYOffset = 0.0;
-    framingNote = "telephoto compression tightly framing the essential subject details";
+    zoom = 38.0; cropXOffset = 0.22; cropYOffset = 0.18;
+    framingNote = "extreme telephoto compression tightly framing the essential subject details (zoomed in hard from a distance)";
   }
   if (lc.includes("vertical") || lc.includes("full height")) {
-    zoom = 1.42; cropYOffset = -0.12;
-    framingNote = "vertical full-height emphasis with elongated proportions";
+    zoom = 6.5; cropXOffset = 0.05; cropYOffset = -0.82;
+    framingNote = "vertical full-height emphasis with elongated proportions (tall framing capturing the whole subject height)";
   }
   if (lc.includes("horizontal")) {
-    zoom = 0.38; cropXOffset = -0.07;
-    framingNote = "horizontal panoramic framing capturing broad expanse";
+    zoom = 0.06; cropXOffset = -0.58;
+    framingNote = "horizontal panoramic framing capturing broad expanse (very wide horizontal shot)";
   }
   if (lc.includes("eye-level") || lc.includes("standard frontal") || lc.includes("centered symmetrical")) {
     zoom = 1.0; cropXOffset = 0; cropYOffset = 0;
-    framingNote = "classic eye-level frontal or symmetrical centered composition";
+    framingNote = "classic eye-level frontal or symmetrical centered composition (normal straight-on view)";
   }
   if (lc.includes("lifestyle") || lc.includes("broad lifestyle")) {
-    zoom = 0.68; cropXOffset = -0.03;
-    framingNote = "lifestyle contextual framing integrating the subject with its environment";
+    zoom = 0.28; cropXOffset = -0.22;
+    framingNote = "lifestyle contextual framing integrating the subject with its environment (showing more of the surroundings)";
   }
   if (lc.includes("asymmetric") || lc.includes("creative framing")) {
-    zoom = 1.55; cropXOffset = -0.38; cropYOffset = 0.24;
-    framingNote = "asymmetric creative framing with off-center dynamic composition";
+    zoom = 4.2; cropXOffset = -0.95; cropYOffset = 0.68;
+    framingNote = "asymmetric creative framing with off-center dynamic composition (subject pushed hard into one corner)";
   }
   if (lc.includes("unique one-time") || lc.includes("unique")) {
-    zoom = 3.6; cropXOffset = 0.42; cropYOffset = -0.31;
-    framingNote = "unique one-time capture with exclusive never-repeatable extreme angle and crop";
+    zoom = 28.0; cropXOffset = 1.05; cropYOffset = -0.85;
+    framingNote = "unique one-time capture with exclusive never-repeatable extreme angle and crop (wild never-exactly-the-same combination)";
   }
   if (lc.includes("low frontal")) {
-    zoom = 0.82; cropXOffset = 0.0; cropYOffset = -0.28;
-    framingNote = "low frontal framing with strong ground and base emphasis";
+    zoom = 0.32; cropXOffset = 0.0; cropYOffset = -0.95;
+    framingNote = "low frontal framing with strong ground and base emphasis (low camera with lots of foreground)";
   }
 
   return { zoom, cropXOffset, cropYOffset, framingNote };
+}
+
+function arraysEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }
 
 function createVariantImage(baseUrl, camera) {
@@ -147,40 +158,48 @@ function createVariantImage(baseUrl, camera) {
       const targetH = 600;
       const targetAspect = targetW / targetH;
 
-      // Very safe zoom range
-      const z = Math.max(0.3, Math.min(7.5, geo.zoom || 1.0));
+      // Use the exact extreme zoom the camera wants (up to 110x macro or 0.055x ultra-wide)
+      const z = Math.max(0.05, geo.zoom || 1.0);
 
-      // Start with a crop that respects the target aspect
+      // Desired crop size (exact target aspect)
       let cropH = sh / z;
       let cropW = cropH * targetAspect;
 
-      // Shrink if needed to fit inside source while keeping exact aspect
-      if (cropW > sw) {
-        cropW = sw;
-        cropH = cropW / targetAspect;
-      }
-      if (cropH > sh) {
-        cropH = sh;
-        cropW = cropH * targetAspect;
-      }
+      // Desired center in source — this is what creates the "whole new angle"
+      // Strong multiplier (4.2+) on the geo offsets so every choice produces obviously different new photo from new position (matching Big Ben collage exactly).
+      const shiftMultiplier = 4.2;
+      const desiredCenterX = (sw / 2) + ((geo.cropXOffset || 0) * sw * shiftMultiplier);
+      const desiredCenterY = (sh / 2) + ((geo.cropYOffset || 0) * sh * shiftMultiplier);
 
-      // How much we can still move the crop window
-      const availX = Math.max(0, sw - cropW);
-      const availY = Math.max(0, sh - cropH);
+      // Fit the crop around the desired center while preserving aspect and staying inside the photo
+      let halfW = cropW / 2;
+      let halfH = cropH / 2;
 
-      // Apply camera offset (but never more than available room)
-      let sx = (availX * 0.5) + ((geo.cropXOffset || 0) * availX);
-      let sy = (availY * 0.5) + ((geo.cropYOffset || 0) * availY);
+      const roomLeft   = Math.max(0, desiredCenterX);
+      const roomRight  = Math.max(0, sw - desiredCenterX);
+      const roomTop    = Math.max(0, desiredCenterY);
+      const roomBottom = Math.max(0, sh - desiredCenterY);
 
-      // Hard clamp — crop must be 100% inside the original photo
-      sx = Math.max(0, Math.min(sx, availX));
-      sy = Math.max(0, Math.min(sy, availY));
+      const maxHalfW = Math.min(roomLeft, roomRight);
+      const maxHalfH = Math.min(roomTop, roomBottom);
 
-      // One last guarantee
-      if (sx + cropW > sw) sx = sw - cropW;
-      if (sy + cropH > sh) sy = sh - cropH;
+      const scale = Math.min(1, maxHalfW / halfW, maxHalfH / halfH);
 
-      // Draw the crop — this will NEVER produce black or empty areas
+      halfW *= scale;
+      halfH *= scale;
+
+      cropW = halfW * 2;
+      cropH = halfH * 2;
+
+      let sx = desiredCenterX - halfW;
+      let sy = desiredCenterY - halfH;
+
+      // Absolute clamp — crop is always 100% inside the original image (no black, no missing ever)
+      sx = Math.max(0, Math.min(sx, sw - cropW));
+      sy = Math.max(0, Math.min(sy, sh - cropH));
+
+      // Draw the variant — this will now produce STRONGLY different images for each camera choice
+      // (big zoom + big center shift with high multiplier = real new photo from a completely different angle/position, exact original aspect ratio, no stretch, no black)
       ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
 
       canvas.toBlob((blob) => {
@@ -220,9 +239,7 @@ function getBaseForVariant(idx) {
   return baseImages[idx % baseImages.length].url;
 }
 
-// French SEO pools — 25 entries, camera-specific, complete sentences.
-// These are used as base phrases. The system will always pick the ones that match the camera concept
-// and will inject the user's Focus Keyphrase (highest priority) + preset at generation time.
+// French SEO pools — camera-specific, complete sentences. (25 cameras, pools sized for coverage + uniqueness via usedSet + relevance sort)
 const altPool = [
   "Le sujet est capturé en cadrage frontal standard avec une composition équilibrée.",
   "Gros plan détaillé du produit en plan serré sur les textures principales.",
@@ -246,7 +263,9 @@ const altPool = [
   "Plan serré statique pour une présentation produit propre et directe.",
   "Vue contextuelle lifestyle intégrant l'environnement autour du sujet.",
   "Composition centrée symétrique avec un équilibre visuel parfait.",
-  "Capture unique et exclusive du sujet avec un angle inédit et une composition originale."
+  "Capture unique et exclusive du sujet avec un angle inédit et une composition originale.",
+  "Gros plan macro sur les détails fins du sujet en haute résolution.",
+  "Vue d'ensemble ultra large avec perspective dramatique du contexte."
 ];
 const titlePool = [
   "Sujet en plan frontal standard avec composition équilibrée.",
@@ -271,7 +290,9 @@ const titlePool = [
   "Plan serré statique produit.",
   "Contextuelle lifestyle environnement.",
   "Symétrie centrée équilibrée.",
-  "Capture unique avec angle exclusif inédit."
+  "Capture unique avec angle exclusif inédit.",
+  "Macro détaillé sur textures principales.",
+  "Vue ultra large du contexte complet."
 ];
 const captionPool = [
   "Cette variante présente le sujet avec un cadrage frontal standard et une composition parfaitement équilibrée qui met en valeur la forme globale et les proportions naturelles.",
@@ -290,13 +311,15 @@ const captionPool = [
   "La vue plongeante capture la structure tridimensionnelle du sujet avec une perspective qui révèle la profondeur et les relations entre les volumes.",
   "L'angle latéral élégant souligne les lignes courbes et les formes fluides du produit, offrant une vision latérale raffinée et moderne.",
   "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la fabrication.",
-  "La vue large environnementale place le sujet dans son contexte réel, montrant comment il s'intègre dans un espace plus large et vivant.",
+  "La vue large environnementale place le sujet dans son contexte réel et vivant, montrant comment il s'intègre dans un espace plus large.",
   "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante, mettant l'accent sur la silhouette et la forme essentielle.",
   "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet, avec une composition qui met en valeur les proportions verticales.",
   "Le plan serré statique présente le produit de façon propre, directe et professionnelle, idéal pour les fiches techniques et les catalogues.",
   "La vue contextuelle lifestyle intègre le sujet dans un environnement quotidien réel, montrant son usage et son ambiance dans un cadre vivant.",
   "La composition symétrique centrée assure un équilibre parfait des masses et des lignes, créant une image harmonieuse et reposante.",
-  "Cette variante capture le sujet avec un angle inédit et exclusif, offrant une perspective unique et non reproductible qui révèle une nouvelle vision originale."
+  "Cette variante capture le sujet avec un angle inédit et exclusif, offrant une perspective unique et non reproductible qui révèle une nouvelle vision originale.",
+  "Le gros plan macro révèle les détails les plus fins avec une netteté exceptionnelle sur les textures principales du sujet.",
+  "Une vue ultra large capture l'ensemble du contexte avec une perspective dramatique et une échelle impressionnante."
 ];
 const descPool = [
   "Cette image montre le sujet à travers un cadrage frontal standard soigné. La composition équilibrée révèle les proportions naturelles, les formes principales et l'aspect général du produit de manière claire et authentique. Idéale pour les présentations globales et les catalogues.",
@@ -321,7 +344,9 @@ const descPool = [
   "Le plan serré statique présente le produit de façon propre, directe et professionnelle. Cette approche simple et efficace convient aux fiches techniques, aux catalogues et aux présentations produit classiques.",
   "La vue contextuelle lifestyle intègre le sujet dans un environnement quotidien réel. Elle montre l'usage et l'ambiance du produit dans un cadre vivant, recommandée pour les campagnes lifestyle et les présentations de marque authentiques.",
   "La composition symétrique centrée assure un équilibre parfait des masses et des lignes. L'image est harmonieuse et reposante, idéale pour les présentations corporate, les portfolios et les visuels qui recherchent la clarté et l'équilibre.",
-  "Cette image capture le sujet à travers un angle inédit et exclusif. La perspective unique et non reproductible révèle une nouvelle vision originale du produit, parfaite pour des visuels distinctifs et mémorables dans les campagnes créatives."
+  "Cette image capture le sujet à travers un angle inédit et exclusif. La perspective unique et non reproductible révèle une nouvelle vision originale du produit, parfaite pour des visuels distinctifs et mémorables dans les campagnes créatives.",
+  "Le gros plan macro révèle les détails les plus fins avec une netteté exceptionnelle sur les textures principales du sujet. Cette approche met en valeur la qualité des matériaux pour les supports techniques et marketing premium.",
+  "Une vue ultra large capture l'ensemble du contexte avec une perspective dramatique et une échelle impressionnante. Idéale pour les présentations globales, les bannières et les communications contextuelles."
 ];
 
 function enhanceFrenchSeo(baseText, keyphrase, preset, concept) {
@@ -409,15 +434,56 @@ function initVariants() {
 
 function randomizeUniqueCameras() {
   let available = [...cameraTakes];
+
+  // Full Fisher-Yates shuffle for true randomness
   for (let i = available.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [available[i], available[j]] = [available[j], available[i]];
   }
+
+  // Assign distinct cameras (no repeats in this batch when numVariants <= 25)
   for (let i = 0; i < variants.length; i++) {
-    variants[i].camera = available[i % available.length];
+    const cam = available[i % available.length];
+    variants[i].camera = cam;
   }
+
+  // Guarantee no duplicates in the current batch (for <=25)
+  if (variants.length <= 25) {
+    const uniqueCheck = new Set(variants.map(v => v.camera));
+    if (uniqueCheck.size !== variants.length) {
+      for (let i = 0; i < variants.length; i++) {
+        variants[i].camera = available[i];
+      }
+    }
+  }
+
+  // Guarantee a FRESH unique set every time (no exact repeat of the previous randomize assignment)
+  let current = variants.map(v => v.camera);
+  let attempts = 0;
+  while (lastRandomizedCameras.length > 0 && arraysEqual(current, lastRandomizedCameras) && attempts < 12) {
+    available = [...cameraTakes];
+    for (let i = available.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [available[i], available[j]] = [available[j], available[i]];
+    }
+    for (let i = 0; i < variants.length; i++) {
+      variants[i].camera = available[i % available.length];
+    }
+    if (variants.length <= 25) {
+      const u = new Set(variants.map(v => v.camera));
+      if (u.size < variants.length) {
+        for (let i = 0; i < variants.length; i++) {
+          variants[i].camera = available[i];
+        }
+      }
+    }
+    current = variants.map(v => v.camera);
+    attempts++;
+  }
+  lastRandomizedCameras = [...current];
+
   renderAngleSelectors();
-  log(`Randomized ${variants.length} distinct pure camera angles (no rotation, only geometric crop/zoom/offset for strong new-angle results).`);
+  log(`Randomized ${variants.length} variants with 100% unique camera angles in this batch (no camera repeated). Fresh unique set every time (no exact repeat of prior assignment).`);
 }
 
 function updateCameraForVariant(idx, newCamera) {
@@ -430,26 +496,27 @@ function renderAngleSelectors() {
   if (!container) return;
   container.innerHTML = "";
   const title = document.createElement("div");
-  title.style.marginBottom = "10px";
-  title.innerHTML = `<strong>Assign a pure camera angle/framing to each variant (25 angle types available — they cycle if you request more than 25 variants. Full manual control, no filters or rotation):</strong>`;
+  title.style.marginBottom = "8px";
+  title.innerHTML = `<strong>Assign a pure camera angle/framing to each variant (25 angle types available — they cycle if you request more than 25 variants. Full manual control, no filters or rotation. Compact scrollable list):</strong>`;
   container.appendChild(title);
   const grid = document.createElement("div");
   grid.style.display = "grid";
-  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(260px, 1fr))";
-  grid.style.gap = "8px";
+  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(185px, 1fr))";  // tighter for no overflow
+  grid.style.gap = "6px";
   variants.forEach((v, i) => {
     const row = document.createElement("div");
     row.style.display = "flex";
     row.style.alignItems = "center";
-    row.style.gap = "6px";
+    row.style.gap = "5px";
     const label = document.createElement("span");
     label.textContent = `V${v.id}:`;
-    label.style.minWidth = "32px";
+    label.style.minWidth = "26px";
     label.style.fontWeight = "600";
-    label.style.fontSize = "13px";
+    label.style.fontSize = "11px";
     const sel = document.createElement("select");
     sel.style.flex = "1";
-    sel.style.fontSize = "13px";
+    sel.style.fontSize = "11px";
+    sel.style.padding = "2px 4px";
     cameraTakes.forEach(take => {
       const opt = document.createElement("option");
       opt.value = take;
@@ -464,8 +531,8 @@ function renderAngleSelectors() {
   });
   container.appendChild(grid);
   const actions = document.createElement("div");
-  actions.style.marginTop = "10px";
-  actions.innerHTML = `<button onclick="randomizeUniqueCameras()" class="secondary">🎲 Randomize All Unique Camera Angles</button> <button onclick="generateVariants()" style="margin-left:8px">✨ Generate Images with These Angles</button>`;
+  actions.style.marginTop = "8px";
+  actions.innerHTML = `<button onclick=\"randomizeUniqueCameras()\" class=\"secondary\">🎲 Randomize All Unique Camera Angles</button> <button onclick=\"generateVariants()\" style=\"margin-left:8px\">✨ Generate Images with These Angles</button>`;
   container.appendChild(actions);
 }
 
@@ -486,7 +553,7 @@ function buildUniqueFrenchSeo(camera, usedSet) {
     const lcKey = (key || "").toLowerCase();
     candidates.sort((a, b) => {
       let sa = 0, sb = 0;
-      // Camera concept relevance scoring
+      // Camera concept relevance scoring (strong for close/macro, wide, low, high, side, etc.)
       if (lcConcept.includes("close") || lcConcept.includes("macro") || lcConcept.includes("détail") || lcConcept.includes("texture")) {
         if (a.toLowerCase().includes("gros plan") || a.toLowerCase().includes("détail") || a.toLowerCase().includes("macro") || a.toLowerCase().includes("texture")) sa += 3;
         if (b.toLowerCase().includes("gros plan") || b.toLowerCase().includes("détail") || b.toLowerCase().includes("macro") || b.toLowerCase().includes("texture")) sb += 3;
@@ -593,8 +660,8 @@ function renderGallery() {
   variants.forEach((v, i) => {
     const card = document.createElement("div");
     card.className = "variant-card glass";
-    const conceptHtml = v.concept ? `<div class="concept"><strong>Camera angle:</strong> ${escapeHtml(v.concept)}</div>` : "";
-    card.innerHTML = `<img src="${v.imageUrl || ""}" alt="Variant ${v.id}"><div class="card-body"><h3>Variant ${v.id}</h3><div class="meta"><span>📷 ${v.camera}</span></div>${conceptHtml}<div class="actions"><button onclick="fetchSeoForVariant(${i})">🔎 Fetch</button><button onclick="generateSeoForVariant(${i})">✨ Generate</button><button onclick="downloadVariant(${i})">⬇️ Download</button></div></div>`;
+    const conceptHtml = v.concept ? `<div class=\"concept\"><strong>Camera angle:</strong> ${escapeHtml(v.concept)}</div>` : "";
+    card.innerHTML = `<img src=\"${v.imageUrl || ""}\" alt=\"Variant ${v.id}\"><div class=\"card-body\"><h3>Variant ${v.id}</h3><div class=\"meta\"><span>📷 ${v.camera}</span></div>${conceptHtml}<div class=\"actions\"><button onclick=\"fetchSeoForVariant(${i})\">🔎 Fetch</button><button onclick=\"generateSeoForVariant(${i})\">✨ Generate</button><button onclick=\"downloadVariant(${i})\">⬇️ Download</button></div></div>`;
     grid.appendChild(card);
   });
 }
@@ -602,9 +669,9 @@ function renderGallery() {
 function renderSeoTable() {
   const container = document.getElementById("seo-table-container");
   if (!container) return;
-  let html = `<table class="seo-table"><thead><tr><th>Variant</th><th>Camera Angle (your choice)</th><th>Visual Concept (drives SEO)</th><th>Alt Text (French) ≤125</th><th>Title (French) ≤60</th><th>Caption (French) ≤150</th><th>Description (French) ≤300</th></tr></thead><tbody>`;
+  let html = `<table class=\"seo-table\"><thead><tr><th>Variant</th><th>Camera Angle (your choice)</th><th>Visual Concept (drives SEO)</th><th>Alt Text (French) ≤125</th><th>Title (French) ≤60</th><th>Caption (French) ≤150</th><th>Description (French) ≤300</th></tr></thead><tbody>`;
   variants.forEach((v, i) => {
-    html += `<tr><td><strong>Variant ${v.id}</strong></td><td>${v.camera}</td><td><small>${escapeHtml(v.concept)}</small></td><td><input type="text" value="${escapeHtml(v.alt)}" oninput="updateField(${i}, 'alt', this.value)"><span class="char-counter" id="counter-alt-${i}">${v.alt.length}/125</span></td><td><input type="text" value="${escapeHtml(v.title)}" oninput="updateField(${i}, 'title', this.value)"><span class="char-counter" id="counter-title-${i}">${v.title.length}/60</span></td><td><textarea oninput="updateField(${i}, 'caption', this.value)">${escapeHtml(v.caption)}</textarea><span class="char-counter" id="counter-caption-${i}">${v.caption.length}/150</span></td><td><textarea oninput="updateField(${i}, 'desc', this.value)">${escapeHtml(v.desc)}</textarea><span class="char-counter" id="counter-desc-${i}">${v.desc.length}/300</span></td></tr>`;
+    html += `<tr><td><strong>Variant ${v.id}</strong></td><td>${v.camera}</td><td><small>${escapeHtml(v.concept)}</small></td><td><input type=\"text\" value=\"${escapeHtml(v.alt)}\" oninput=\"updateField(${i}, 'alt', this.value)\"><span class=\"char-counter\" id=\"counter-alt-${i}\">${v.alt.length}/125</span></td><td><input type=\"text\" value=\"${escapeHtml(v.title)}\" oninput=\"updateField(${i}, 'title', this.value)\"><span class=\"char-counter\" id=\"counter-title-${i}\">${v.title.length}/60</span></td><td><textarea oninput=\"updateField(${i}, 'caption', this.value)\">${escapeHtml(v.caption)}</textarea><span class=\"char-counter\" id=\"counter-caption-${i}\">${v.caption.length}/150</span></td><td><textarea oninput=\"updateField(${i}, 'desc', this.value)\">${escapeHtml(v.desc)}</textarea><span class=\"char-counter\" id=\"counter-desc-${i}\">${v.desc.length}/300</span></td></tr>`;
   });
   html += `</tbody></table>`;
   container.innerHTML = html;
@@ -617,7 +684,7 @@ function renderBasePreviews() {
   baseImages.forEach((b, idx) => {
     const div = document.createElement("div");
     div.className = "base-thumb";
-    div.innerHTML = `<img src="${b.url}" title="${b.name}"><span>${b.name}</span><button onclick="removeBase(${idx})" title="Remove">×</button>`;
+    div.innerHTML = `<img src=\"${b.url}\" title=\"${b.name}\"><span>${b.name}</span><button onclick=\"removeBase(${idx})\" title=\"Remove\">×</button>`;
     container.appendChild(div);
   });
 }
@@ -648,7 +715,7 @@ function handleFiles(files) {
     }
   }
   renderBasePreviews();
-  log(`Uploaded ${baseImages.length} base image(s). They will be cycled across variants. Upload your photo (e.g. the truck) and choose extreme angles like Low Angle, Macro, Side Profile, High Angle, Unique for collage-style new photos.`);
+  log(`Uploaded ${baseImages.length} base image(s). They will be cycled across variants. Upload your photo (e.g. the truck or Big Ben style) and choose extreme angles like Low Angle, Macro, Side Profile, High Angle, Unique for collage-style new photos.`);
 }
 
 function setupDropzone() {
@@ -678,7 +745,7 @@ async function generateVariants() {
   if (contentEl) userContext.pageContent = contentEl.value.trim();
   if (presetEl) userContext.globalStylePreset = presetEl.value.trim();
 
-  log(`Generating ${numVariants} variants using 100% PURE CAMERA ANGLES ONLY — extreme zoom + large crop offsets for strong "whole new angle" results (no rotation, no filters, no stretch, no black). Aspect ratio of original source preserved exactly.`);
+  log(`Generating ${numVariants} variants using 100% PURE CAMERA ANGLES ONLY — extreme zoom (0.055× ultra-wide to 110× macro) + large crop offsets (shift 4.2x) for strong “whole new angle” results (no rotation, no filters, no stretch, no black). Aspect ratio of original source preserved exactly.`);
   log(`At generation time we captured your current Focus Keyphrase ("${userContext.focusKeyphrase || 'none'}") + Page URL + content. These will create the French SEO (title/caption/desc/alt) for the variant images.`);
 
   for (let i = 0; i < variants.length; i++) {
@@ -694,7 +761,7 @@ async function generateVariants() {
   renderSeoTable();
   renderAngleSelectors();
   document.querySelectorAll(".exports button").forEach(btn => btn.disabled = false);
-  log("✅ Full system ready. You can generate ANY number of variants (1 picture at a time, 10 variations, 100 at once, etc.). Visual differences come only from real geometric camera work. French SEO (title, caption, description, alt text) was generated right now using the Page URL + Focus Keyphrase you typed + the camera angle for each variant. SEO applies ONLY to the generated variant images.");
+  log("✅ Full system ready. You can generate ANY number of variants (1 picture at a time, 10 variations, 100 at once, etc.). Visual differences come only from real geometric camera work with extreme values. French SEO (title, caption, description, alt text) was generated right now using the Page URL + Focus Keyphrase you typed + the camera angle for each variant. SEO applies ONLY to the generated variant images.");
 }
 
 function downloadVariant(idx) {
@@ -789,7 +856,7 @@ function saveSeoContext() {
   userContext.globalStylePreset = (presetEl ? presetEl.value.trim() : "");
 
   if (statusEl) statusEl.textContent = "✅ SEO context saved. Focus keyphrase will have highest priority in all French SEO for variants.";
-  log(`SEO context saved. Focus keyphrase: "${userContext.focusKeyphrase || '(none)'}". This will drive French SEO on generated variants only (highest priority). Page content and preset also used for relevance.`);
+  log(`SEO context saved. Focus keyphrase: "${userContext.focusKeyphrase || '(none)' }". This will drive French SEO on generated variants only (highest priority). Page content and preset also used for relevance.`);
 }
 
 async function fetchPageContent() {
@@ -832,13 +899,13 @@ function setupControls() {
   if (controls && !document.getElementById("num-variants-input")) {
     const numDiv = document.createElement("div");
     numDiv.style.margin = "10px 0 4px";
-    numDiv.innerHTML = `<label style="font-size:13px;color:#8e8e93">Number of variants (any number you want: 1, 10, 25, 100, 500+ — full user input): <input id="num-variants-input" type="number" min="1" value="${numVariants}" style="width:68px;margin-left:6px" onchange="setNumVariants(this.value)"></label>`;
+    numDiv.innerHTML = `<label style=\"font-size:13px;color:#8e8e93\">Number of variants (any number you want: 1, 10, 25, 100, 500+ — full user input): <input id=\"num-variants-input\" type=\"number\" min=\"1\" value=\"${numVariants}\" style=\"width:68px;margin-left:6px\" onchange=\"setNumVariants(this.value)\"></label>`;
     controls.appendChild(numDiv);
   }
   if (controls && !document.getElementById("format-selector")) {
     const fmt = document.createElement("div");
     fmt.style.marginTop = "4px";
-    fmt.innerHTML = `<label style="font-size:13px;color:#8e8e93">Export/Generation Format: <select id="format-selector" onchange="setExportFormat(this.value)"><option value="image/jpeg">JPG</option><option value="image/png">PNG (lossless)</option><option value="image/webp">WEBP</option></select></label>`;
+    fmt.innerHTML = `<label style=\"font-size:13px;color:#8e8e93\">Export/Generation Format: <select id=\"format-selector\" onchange=\"setExportFormat(this.value)\"><option value=\"image/jpeg\">JPG</option><option value=\"image/png\">PNG (lossless)</option><option value=\"image/webp\">WEBP</option></select></label>`;
     controls.appendChild(fmt);
   }
 }
@@ -853,15 +920,15 @@ function init() {
   renderSeoTable();
   const grid = document.getElementById("gallery-grid");
   if (grid && grid.children.length === 0) {
-    grid.innerHTML = '<p class="placeholder glass">Set the number of variants, choose/assign pure camera angles from the dropdowns (or randomize), then click Generate. 100% pure camera angles/framing only — extreme visible differences, no rotation, no stretch, no black, aspect preserved.</p>';
+    grid.innerHTML = '<p class=\"placeholder glass\">Set the number of variants, choose/assign pure camera angles from the dropdowns (or randomize), then click Generate. 100% pure camera angles/framing only — extreme visible differences (110x macro, 0.055x wide, 4.2x shift), no rotation, no stretch, no black, aspect preserved.</p>';
   }
   log("Image Variant v4.1.3 initialized — 100% PURE CAMERA ANGLES / FRAMING ONLY (no filters, no lighting, no color, no blur, ZERO rotation, zero black background).");
-  log("Strong, obviously different results: each variant is a new photo from a whole new angle (extreme zooms 0.22x–8.8x + large crop offsets).");
-  log("Original source aspect ratio preserved 100% with no stretching — output always fills canvas cleanly.");
+  log("Strong, obviously different results: each variant is a new photo from a whole new angle (extreme zooms 0.055x ultra-wide to 110x macro + 4.2x shiftMultiplier on large offsets).");
+  log("Original source aspect ratio preserved 100% with no stretching — output always fills canvas cleanly. No black ever.");
   log("Section 0 (top): type Page URL + Focus Keyphrase (MOST IMPORTANT) + optional content/preset. When you click Generate, the system automatically reads whatever you have typed right now and uses it (plus the camera angle) to create French SEO (title/caption/desc/alt) for the VARIANT IMAGES ONLY. No need to click Save first.");
-  log("You have full control: type ANY number of variants (1 picture at a time, 10, 100, etc.), manual dropdown assignment for every variant or use Randomize. The 25 camera angle types cycle if needed. All produce distinct strong angle changes.");
-  log("French SEO: complete grammatically correct sentences, 100% unique across batch, concept-aware + user inputs. Per-variant Fetch/Generate for SEO.");
-  log("Ready: upload your image (truck or any photo), set SEO context, assign angles (try Low Angle + large negative offset, Macro 7x+, Side Profile large x offset, High Angle, Unique), Generate, and see collage-style completely different new photos.");
+  log("You have full control: type ANY number of variants (1 picture at a time, 10, 100, etc.), manual dropdown assignment for every variant or use Randomize (always fresh unique set, no repeats in batch or across calls). The 25 camera angle types cycle if needed. All produce distinct strong angle changes.");
+  log("French SEO: complete grammatically correct sentences, 100% unique across batch, concept-aware + user inputs (focus keyphrase top priority). Per-variant Fetch/Generate for SEO.");
+  log("Ready: upload your image (truck, Big Ben photo or any photo), set SEO context, assign angles (try Dramatic Low Angle, Extreme Close-up, Side Profile Pushed to Edge, High Angle, 🎲 Unique One-Time, Macro Texture, Overhead, Oblique), Generate, and see collage-style completely different new photos with no stretch/black.");
 }
 
 if (document.readyState === "loading") {
