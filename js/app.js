@@ -158,18 +158,33 @@ function createVariantImage(baseUrl, camera) {
       const targetH = 600;
       const targetAspect = targetW / targetH;
 
-      // Use the exact extreme zoom the camera wants (up to 110x macro or 0.055x ultra-wide)
-      const z = Math.max(0.05, geo.zoom || 1.0);
+      // === FRESH UNIQUE LOOKS EVERY GENERATION (even for identical source + identical camera labels) ===
+      // Small random jitter on zoom + offsets guarantees that:
+      // - Uploading the exact same photo again + Generate → completely different crops / new looks (never the same image twice)
+      // - Re-clicking Generate or re-uploading the same source always gives fresh 100% unique variations
+      // - The "camera angle type" (Dramatic Low Angle etc.) and its concept/framingNote stay consistent for UI + SEO
+      // - One angle / one variation each time is visually distinct
+      const jitterStrength = 0.085; // enough to make every run visibly different ("not same at all")
+      const jitterX = (Math.random() - 0.5) * jitterStrength * 2;
+      const jitterY = (Math.random() - 0.5) * jitterStrength * 2;
+      const zoomJitter = 0.92 + Math.random() * 0.16; // ±8% zoom variation
+
+      const effectiveXOffset = (geo.cropXOffset || 0) + jitterX;
+      const effectiveYOffset = (geo.cropYOffset || 0) + jitterY;
+      const effectiveZoom = Math.max(0.05, (geo.zoom || 1.0) * zoomJitter);
+
+      // Use the (jittered) extreme zoom the camera wants
+      const z = effectiveZoom;
 
       // Desired crop size (exact target aspect)
       let cropH = sh / z;
       let cropW = cropH * targetAspect;
 
       // Desired center in source — this is what creates the "whole new angle"
-      // Strong multiplier (4.2+) on the geo offsets so every choice produces obviously different new photo from new position (matching Big Ben collage exactly).
+      // Strong multiplier (4.2+) on the (jittered) offsets
       const shiftMultiplier = 4.2;
-      const desiredCenterX = (sw / 2) + ((geo.cropXOffset || 0) * sw * shiftMultiplier);
-      const desiredCenterY = (sh / 2) + ((geo.cropYOffset || 0) * sh * shiftMultiplier);
+      const desiredCenterX = (sw / 2) + (effectiveXOffset * sw * shiftMultiplier);
+      const desiredCenterY = (sh / 2) + (effectiveYOffset * sh * shiftMultiplier);
 
       // Fit the crop around the desired center while preserving aspect and staying inside the photo
       let halfW = cropW / 2;
@@ -198,8 +213,7 @@ function createVariantImage(baseUrl, camera) {
       sx = Math.max(0, Math.min(sx, sw - cropW));
       sy = Math.max(0, Math.min(sy, sh - cropH));
 
-      // Draw the variant — this will now produce STRONGLY different images for each camera choice
-      // (big zoom + big center shift with high multiplier = real new photo from a completely different angle/position, exact original aspect ratio, no stretch, no black)
+      // Draw the variant — produces STRONGLY different images every single time (even same camera + same source)
       ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
 
       canvas.toBlob((blob) => {
@@ -414,13 +428,24 @@ function clearLog() {
   if (logEl) logEl.innerHTML = "";
 }
 
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function initVariants() {
   variants.forEach(v => { if (v.imageUrl) try { URL.revokeObjectURL(v.imageUrl); } catch(e){} });
   variants = [];
+  // Start with a fresh shuffle every time (so even on page reload or num change, defaults are not the boring sequential order)
+  const shuffled = shuffleArray(cameraTakes);
   for (let i = 0; i < numVariants; i++) {
     variants.push({
       id: i + 1,
-      camera: cameraTakes[i % cameraTakes.length],
+      camera: shuffled[i % shuffled.length],
       imageUrl: null,
       filename: `variant-${i + 1}.jpg`,
       alt: "",
@@ -495,28 +520,35 @@ function renderAngleSelectors() {
   const container = document.getElementById("angle-selectors");
   if (!container) return;
   container.innerHTML = "";
-  const title = document.createElement("div");
-  title.style.marginBottom = "8px";
-  title.innerHTML = `<strong>Assign a pure camera angle/framing to each variant (25 angle types available — they cycle if you request more than 25 variants. Full manual control, no filters or rotation. Compact scrollable list):</strong>`;
-  container.appendChild(title);
+  const header = document.createElement("div");
+  header.style.margin = "0 0 1px 0";
+  header.style.fontSize = "9.5px";
+  header.style.fontWeight = "600";
+  header.style.color = "#a8a8b3";
+  header.textContent = "Assign pure camera angles (compact — 25 types cycle for >25):";
+  container.appendChild(header);
+
   const grid = document.createElement("div");
   grid.style.display = "grid";
-  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(185px, 1fr))";  // tighter for no overflow
-  grid.style.gap = "6px";
+  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(122px, 1fr))";
+  grid.style.gap = "1px 2px";
+  grid.style.maxHeight = "108px";
+  grid.style.overflowY = "auto";
+  grid.style.paddingRight = "2px";
   variants.forEach((v, i) => {
     const row = document.createElement("div");
     row.style.display = "flex";
     row.style.alignItems = "center";
-    row.style.gap = "5px";
+    row.style.gap = "2px";
     const label = document.createElement("span");
     label.textContent = `V${v.id}:`;
-    label.style.minWidth = "26px";
+    label.style.minWidth = "17px";
     label.style.fontWeight = "600";
-    label.style.fontSize = "11px";
+    label.style.fontSize = "9px";
     const sel = document.createElement("select");
     sel.style.flex = "1";
-    sel.style.fontSize = "11px";
-    sel.style.padding = "2px 4px";
+    sel.style.fontSize = "9px";
+    sel.style.padding = "0 1px";
     cameraTakes.forEach(take => {
       const opt = document.createElement("option");
       opt.value = take;
@@ -531,8 +563,11 @@ function renderAngleSelectors() {
   });
   container.appendChild(grid);
   const actions = document.createElement("div");
-  actions.style.marginTop = "8px";
-  actions.innerHTML = `<button onclick=\"randomizeUniqueCameras()\" class=\"secondary\">🎲 Randomize All Unique Camera Angles</button> <button onclick=\"generateVariants()\" style=\"margin-left:8px\">✨ Generate Images with These Angles</button>`;
+  actions.style.marginTop = "2px";
+  actions.innerHTML = `
+    <button onclick="randomizeUniqueCameras()" class="secondary" style="font-size:9px; padding:1px 5px;">🎲 Randomize Unique</button>
+    <button onclick="generateVariants()" style="font-size:9px; padding:1px 5px;">✨ Generate</button>
+  `;
   container.appendChild(actions);
 }
 
