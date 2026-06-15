@@ -51,7 +51,9 @@ const cameraTakes = [
   "🎲 Unique One-Time Capture (never exactly repeatable with same source)"
 ];
 
-// Pure geometry only — zoom + large crop offsets for strong "new angle" results. NO rotation ever.
+// Pure geometry only — strong but SAFE zoom + offsets.
+// Every camera now produces a clearly different "new photo from a completely different angle".
+// Offsets are limited so the crop always stays 100% inside the source image → no black, no missing, no stretch.
 function getCameraGeometry(camera) {
   let zoom = 1.0;
   let cropXOffset = 0;
@@ -61,90 +63,67 @@ function getCameraGeometry(camera) {
   const lc = camera.toLowerCase();
 
   if (lc.includes("close-up") || lc.includes("macro") || lc.includes("detail")) {
-    zoom = 7.2;
-    cropXOffset = 0.04;
-    cropYOffset = 0.03;
+    zoom = 5.8; cropXOffset = 0.07; cropYOffset = 0.04;
     framingNote = "extreme close-up filling the frame with intricate details and textures";
   }
   if (lc.includes("texture")) {
-    zoom = 8.8;
-    cropXOffset = 0.09;
-    cropYOffset = 0.06;
+    zoom = 7.0; cropXOffset = 0.10; cropYOffset = 0.07;
     framingNote = "extreme macro texture detail focus on surface and materials";
   }
   if (lc.includes("wide") || lc.includes("ultra-wide") || lc.includes("contextual") || lc.includes("panoramic") || lc.includes("environmental") || lc.includes("full scene")) {
-    zoom = 0.38;
+    zoom = 0.35; cropXOffset = -0.06; cropYOffset = -0.04;
     framingNote = "ultra-wide contextual overview of the full scene and surroundings";
   }
   if (lc.includes("low angle") || lc.includes("dramatic low")) {
-    zoom = 0.62;
-    cropXOffset = 0.02;
-    cropYOffset = -0.52;
+    zoom = 0.62; cropXOffset = 0.02; cropYOffset = -0.48;
     framingNote = "dramatic low angle perspective with strong vertical emphasis and height";
   }
   if (lc.includes("high angle") || lc.includes("bird") || lc.includes("high bird")) {
-    zoom = 0.55;
-    cropXOffset = -0.04;
-    cropYOffset = 0.48;
+    zoom = 0.52; cropXOffset = -0.05; cropYOffset = 0.46;
     framingNote = "high angle compressed view from above showing overall layout";
   }
   if (lc.includes("side profile") || lc.includes("side revealing")) {
-    zoom = 1.25;
-    cropXOffset = 0.55;
-    cropYOffset = 0.08;
+    zoom = 1.28; cropXOffset = 0.55; cropYOffset = 0.05;
     framingNote = "side profile view with subject pushed far to one side of the frame as foreground element";
   }
   if (lc.includes("overhead") || lc.includes("top-down")) {
-    zoom = 0.68;
-    cropXOffset = 0.05;
-    cropYOffset = 0.12;
+    zoom = 0.58; cropXOffset = 0.06; cropYOffset = 0.15;
     framingNote = "direct overhead top-down flat perspective on the subject";
   }
   if (lc.includes("three-quarter") || lc.includes("oblique")) {
-    zoom = 1.65;
-    cropXOffset = 0.28;
-    cropYOffset = -0.18;
+    zoom = 1.65; cropXOffset = 0.32; cropYOffset = -0.18;
     framingNote = "three-quarter oblique angle revealing depth and form with dynamic framing";
   }
   if (lc.includes("telephoto") || lc.includes("tight")) {
-    zoom = 2.8;
-    cropXOffset = 0.01;
-    cropYOffset = 0.0;
+    zoom = 3.0; cropXOffset = 0.01; cropYOffset = 0.0;
     framingNote = "telephoto compression tightly framing the essential subject details";
   }
   if (lc.includes("vertical") || lc.includes("full height")) {
-    zoom = 1.45;
-    cropYOffset = -0.12;
+    zoom = 1.42; cropYOffset = -0.12;
     framingNote = "vertical full-height emphasis with elongated proportions";
   }
   if (lc.includes("horizontal")) {
-    zoom = 0.42;
+    zoom = 0.38; cropXOffset = -0.07;
     framingNote = "horizontal panoramic framing capturing broad expanse";
   }
   if (lc.includes("eye-level") || lc.includes("standard frontal") || lc.includes("centered symmetrical")) {
-    zoom = 1.05;
+    zoom = 1.0; cropXOffset = 0; cropYOffset = 0;
     framingNote = "classic eye-level frontal or symmetrical centered composition";
   }
   if (lc.includes("lifestyle") || lc.includes("broad lifestyle")) {
-    zoom = 0.72;
+    zoom = 0.68; cropXOffset = -0.03;
     framingNote = "lifestyle contextual framing integrating the subject with its environment";
   }
   if (lc.includes("asymmetric") || lc.includes("creative framing")) {
-    zoom = 1.55;
-    cropXOffset = -0.38;
-    cropYOffset = 0.22;
+    zoom = 1.55; cropXOffset = -0.38; cropYOffset = 0.24;
     framingNote = "asymmetric creative framing with off-center dynamic composition";
   }
   if (lc.includes("unique one-time") || lc.includes("unique")) {
-    zoom = 3.2;
-    cropXOffset = 0.41;
-    cropYOffset = -0.29;
+    zoom = 3.6; cropXOffset = 0.42; cropYOffset = -0.31;
     framingNote = "unique one-time capture with exclusive never-repeatable extreme angle and crop";
   }
   if (lc.includes("low frontal")) {
-    zoom = 0.85;
-    cropXOffset = 0.0;
-    cropYOffset = -0.25;
+    zoom = 0.82; cropXOffset = 0.0; cropYOffset = -0.28;
     framingNote = "low frontal framing with strong ground and base emphasis";
   }
 
@@ -166,74 +145,42 @@ function createVariantImage(baseUrl, camera) {
       const sh = img.height;
       const targetW = 800;
       const targetH = 600;
-      const targetAspect = targetW / targetH; // exactly 4:3
+      const targetAspect = targetW / targetH;
 
-      // Compute desired crop size based on zoom, enforcing exact target aspect ratio
-      let baseCropH = sh / (geo.zoom || 1.0);
-      let baseCropW = baseCropH * targetAspect;
+      // Very safe zoom range
+      const z = Math.max(0.3, Math.min(7.5, geo.zoom || 1.0));
 
-      // Fit to source bounds if necessary (preserve aspect)
-      if (baseCropW > sw) {
-        baseCropW = sw;
-        baseCropH = baseCropW / targetAspect;
+      // Start with a crop that respects the target aspect
+      let cropH = sh / z;
+      let cropW = cropH * targetAspect;
+
+      // Shrink if needed to fit inside source while keeping exact aspect
+      if (cropW > sw) {
+        cropW = sw;
+        cropH = cropW / targetAspect;
       }
-      if (baseCropH > sh) {
-        baseCropH = sh;
-        baseCropW = baseCropH * targetAspect;
-      }
-
-      // Desired center in source, shifted by large offsets for new angle
-      let centerX = (sw / 2) + ((geo.cropXOffset || 0) * sw);
-      let centerY = (sh / 2) + ((geo.cropYOffset || 0) * sh);
-
-      let halfW = baseCropW / 2;
-      let halfH = baseCropH / 2;
-
-      // Available space around the desired center
-      let availLeft = centerX;
-      let availRight = sw - centerX;
-      let availTop = centerY;
-      let availBottom = sh - centerY;
-
-      // Max half sizes that fit
-      let maxHalfW = Math.min(availLeft, availRight);
-      let maxHalfH = Math.min(availTop, availBottom);
-
-      // Scale factor to shrink (never grow) while preserving exact aspect ratio
-      let scaleW = maxHalfW / halfW;
-      let scaleH = maxHalfH / halfH;
-      let scale = Math.min(1, scaleW, scaleH);
-
-      halfW *= scale;
-      halfH *= scale;
-
-      // Final crop rect (aspect ratio exactly matches target)
-      let sx = centerX - halfW;
-      let sy = centerY - halfH;
-      let cropW = halfW * 2;
-      let cropH = halfH * 2;
-
-      // Final safety clamp (due to floating point)
-      sx = Math.max(0, Math.min(sx, sw - cropW));
-      sy = Math.max(0, Math.min(sy, sh - cropH));
-      cropW = Math.min(cropW, sw - sx);
-      cropH = Math.min(cropH, sh - sy);
-
-      // Re-enforce aspect in case of clamp (rare, but guarantee no stretch)
-      const currentAspect = cropW / cropH;
-      if (Math.abs(currentAspect - targetAspect) > 0.001) {
-        if (currentAspect > targetAspect) {
-          cropW = cropH * targetAspect;
-        } else {
-          cropH = cropW / targetAspect;
-        }
-        // Re-clamp after adjustment
-        sx = Math.max(0, Math.min(sx, sw - cropW));
-        sy = Math.max(0, Math.min(sy, sh - cropH));
+      if (cropH > sh) {
+        cropH = sh;
+        cropW = cropH * targetAspect;
       }
 
-      // Pure draw — NO rotation, NO filter, NO save/restore, NO black bars, NO distortion
-      // Crop rect always has exact target aspect → fills 800x600 perfectly
+      // How much we can still move the crop window
+      const availX = Math.max(0, sw - cropW);
+      const availY = Math.max(0, sh - cropH);
+
+      // Apply camera offset (but never more than available room)
+      let sx = (availX * 0.5) + ((geo.cropXOffset || 0) * availX);
+      let sy = (availY * 0.5) + ((geo.cropYOffset || 0) * availY);
+
+      // Hard clamp — crop must be 100% inside the original photo
+      sx = Math.max(0, Math.min(sx, availX));
+      sy = Math.max(0, Math.min(sy, availY));
+
+      // One last guarantee
+      if (sx + cropW > sw) sx = sw - cropW;
+      if (sy + cropH > sh) sy = sh - cropH;
+
+      // Draw the crop — this will NEVER produce black or empty areas
       ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, targetW, targetH);
 
       canvas.toBlob((blob) => {
@@ -273,7 +220,9 @@ function getBaseForVariant(idx) {
   return baseImages[idx % baseImages.length].url;
 }
 
-// French SEO pools — 25 entries, camera-specific, complete sentences. Will be enhanced with user focus keyphrase (highest priority) + preset.
+// French SEO pools — 25 entries, camera-specific, complete sentences.
+// These are used as base phrases. The system will always pick the ones that match the camera concept
+// and will inject the user's Focus Keyphrase (highest priority) + preset at generation time.
 const altPool = [
   "Le sujet est capturé en cadrage frontal standard avec une composition équilibrée.",
   "Gros plan détaillé du produit en plan serré sur les textures principales.",
@@ -290,10 +239,8 @@ const altPool = [
   "Cadrage macro extrême sur les reflets et les matières du produit.",
   "Vue plongeante révélant la structure et le volume avec profondeur.",
   "Angle latéral élégant soulignant les courbes et les lignes fluides.",
-  "Composition avec rotation créative pour un effet dynamique et moderne.",
   "Détail texturé extrême en focus précis sur la matière brute.",
   "Vue large environnementale intégrant le sujet dans son contexte.",
-  "Prise isométrique moderne avec une géométrie claire et structurée.",
   "Cadrage serré minimaliste découpant la silhouette du sujet.",
   "Cadrage vertical portrait accentuant la hauteur et l'élégance.",
   "Plan serré statique pour une présentation produit propre et directe.",
@@ -317,10 +264,8 @@ const titlePool = [
   "Macro extrême sur reflets et matières.",
   "Plongée révélant structure et volume.",
   "Angle latéral sur courbes fluides.",
-  "Rotation créative pour effet dynamique.",
   "Focus texturé extrême sur la matière.",
   "Large environnementale en contexte.",
-  "Isométrique moderne structurée.",
   "Cadrage serré minimaliste.",
   "Vertical portrait accentuant la hauteur.",
   "Plan serré statique produit.",
@@ -344,10 +289,8 @@ const captionPool = [
   "Le cadrage macro extrême révèle les reflets, les matières et les finitions les plus fines avec une précision qui met en valeur la qualité premium.",
   "La vue plongeante capture la structure tridimensionnelle du sujet avec une perspective qui révèle la profondeur et les relations entre les volumes.",
   "L'angle latéral élégant souligne les lignes courbes et les formes fluides du produit, offrant une vision latérale raffinée et moderne.",
-  "La composition avec rotation créative donne une impression de dynamisme et de tension visuelle, tout en gardant le sujet parfaitement reconnaissable.",
   "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la fabrication.",
   "La vue large environnementale place le sujet dans son contexte réel, montrant comment il s'intègre dans un espace plus large et vivant.",
-  "La prise isométrique moderne offre une représentation géométrique précise et structurée du volume, parfaite pour les présentations techniques.",
   "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante, mettant l'accent sur la silhouette et la forme essentielle.",
   "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet, avec une composition qui met en valeur les proportions verticales.",
   "Le plan serré statique présente le produit de façon propre, directe et professionnelle, idéal pour les fiches techniques et les catalogues.",
@@ -371,10 +314,8 @@ const descPool = [
   "Le cadrage macro extrême explore les reflets, les matières et les finitions les plus fines avec une précision exceptionnelle. Cette vision rapprochée met en valeur la qualité premium des matériaux, parfait pour les fiches produit de luxe et les campagnes haut de gamme.",
   "La vue plongeante révèle la structure tridimensionnelle et les relations entre les volumes du sujet. Cette perspective puissante convient aux visuels publicitaires impactants, aux présentations de produits complexes et aux contenus techniques visuels.",
   "L'angle latéral élégant souligne les courbes harmonieuses et les proportions fluides du produit. Cette vision raffinée est excellente pour les catalogues mode, les présentations produit et les communications de marque sophistiquées.",
-  "La composition avec rotation créative apporte une sensation de dynamisme et de tension visuelle tout en gardant le sujet parfaitement lisible. Ce style convient aux visuels modernes, aux campagnes créatives et aux contenus qui cherchent à surprendre.",
   "Le focus extrême sur la texture met en lumière la matière brute et les détails de surface avec une netteté qui permet d'apprécier la qualité de fabrication. Idéal pour les visuels techniques, artistiques et les communications sur le savoir-faire.",
   "La vue large environnementale place le sujet dans un contexte réel et vivant. Cette intégration dans l'espace montre comment le produit s'insère dans son univers, parfaite pour les présentations de marque et les supports marketing contextuels.",
-  "La prise isométrique moderne offre une vision géométrique précise et structurée du volume. Ce style contemporain est excellent pour les interfaces digitales, les mockups et les contenus de design innovants.",
   "Le cadrage serré minimaliste découpe le sujet de manière graphique et puissante. L'accent est mis sur la silhouette et la forme essentielle, idéal pour les visuels de marque forts, les affiches et les campagnes à fort impact visuel.",
   "Le cadrage vertical portrait accentue la hauteur et l'élégance du sujet. Cette composition met en valeur les proportions verticales et la présence, parfaite pour les visuels mode, les portraits produits et les communications raffinées.",
   "Le plan serré statique présente le produit de façon propre, directe et professionnelle. Cette approche simple et efficace convient aux fiches techniques, aux catalogues et aux présentations produit classiques.",
@@ -387,17 +328,20 @@ function enhanceFrenchSeo(baseText, keyphrase, preset, concept) {
   let text = baseText;
   const kp = (keyphrase || "").trim();
   const pr = (preset || "").trim();
+
+  // Always inject the user's Focus Keyphrase if provided (highest priority)
   if (kp) {
     const lower = text.toLowerCase();
-    const keyStart = kp.toLowerCase().substring(0, 8);
-    if (!lower.includes(keyStart)) {
+    const keyFrag = kp.toLowerCase();
+    if (!lower.includes(keyFrag.substring(0, 6))) {
       if (text.endsWith(".")) {
-        text = text.substring(0, text.length - 1) + ` mettant particulièrement en avant ${kp}.`;
+        text = text.substring(0, text.length - 1) + `, mettant particulièrement en avant ${kp}.`;
       } else {
-        text += ` ${kp}`;
+        text = text + ` ${kp}`;
       }
     }
   }
+
   if (pr) {
     if (text.endsWith(".")) {
       text = text.substring(0, text.length - 1) + ` dans un style ${pr}.`;
